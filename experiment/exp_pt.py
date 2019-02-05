@@ -1,0 +1,540 @@
+import numpy as np
+import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.autograd import Variable
+
+from experiment import utils
+from experiment import Base_experiment_pretraining
+from experiment.tracker import Tracker_classification, Tracker_similarity, Tracker_similarity_rec
+from compvis.models import Siamese, Siamese_fm
+from compvis.datasets import Dataset_def, Dataset_fm, Dataset_RGB, Dataset_OF
+
+from compvis import transforms_det as transforms 
+
+__all__ = ['Experiment_pretraining_def', 'Experiment_pretraining_fm']
+
+class Experiment_pretraining_def(Base_experiment_pretraining):
+	net = None
+	tracker = None
+	optimizer = None
+	dataset_type = None
+	def __init__(self,
+			name,
+			batch_size = 30,
+			epochs = 200,
+			learning_rate = 0.01,
+			lr_decay_scheme = 0,
+			weight_decay = 0.0005,
+			norm = 'BN',
+			data_key = 'all',
+			modalities = ['rgb', 'cod'],
+			source = 'l',
+			num_frames = 10,
+			num_frames_cod = 4,
+			rgb = 0.3,
+			split_channels = False,
+			dropout = 0.5,
+			use_rand = True,
+			high_motion = False,
+			time_flip = False
+		):
+		super(Experiment_pretraining_def, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
+			norm=norm, data_key=data_key, source=source, rgb=rgb, split_channels=split_channels, 
+			dropout=dropout, use_rand=use_rand)
+		self.num_frames = num_frames
+		self.num_frames_cod = num_frames_cod
+		self.high_motion = high_motion	
+		self.time_flip = time_flip
+		self.modalities = modalities
+		self.list_infos += [('num_frames', num_frames), ('num_frames_cod', num_frames_cod),
+			('high_motion', high_motion), ('time_flip', time_flip), ('modalities', modalities)]
+
+		self.net = Siamese(norm=self.norm, num_frames=self.num_frames, dropout=self.dropout,
+			modalities=self.modalities)
+		self.tracker = Tracker_classification()
+		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
+			momentum=0.9, weight_decay=self.weight_decay)
+		self.dataset_type = Dataset_fm
+		self.criterion = nn.CrossEntropyLoss()
+
+	def _get_data(self, iterator):
+		samples = next(iterator, None)
+		if samples is None:
+			return None, None
+		data = []
+		for field in samples:
+			field = torch.cat(field, dim=0).cuda()
+			field = Variable(field)
+			data.append(field)
+
+		batch_size = data[0].size()[0]
+		labels_zero_1 = Variable(torch.LongTensor(batch_size).zero_().cuda())
+		labels_zero_2 = Variable(torch.LongTensor(batch_size).zero_().cuda())
+		labels_one_1 = Variable(torch.LongTensor(batch_size).zero_().cuda() + 1)
+		labels_one_2 = Variable(torch.LongTensor(batch_size).zero_().cuda() + 1)
+		labels = [labels_one_1, labels_one_2, labels_zero_1, labels_zero_2]
+		return data, labels
+
+	def _get_loss(self, output, labels):
+		norms = output[-1]
+		output = output[:-1]
+		loss = 0
+		for i in range(4):
+			loss += self.criterion(output[i], labels[i])
+		loss /= 4
+		return loss
+
+	def _reconfigure_dataloader_train(self):
+		transform_rgb = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size),
+			transforms.RandomHorizontalFlip(), 
+			self.transform_color,
+			transforms.ToTensor(),
+			transforms.Normalize(self.mean, self.std)])
+		transform_of = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size),
+			transforms.RandomHorizontalFlip(), 
+			transforms.ToTensor(), 
+			transforms.SubMeanDisplacement()])
+		transform_cod = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size),
+			transforms.RandomHorizontalFlip(), 
+			transforms.ToTensor()])
+		dataset_infos = []
+		for dataset_info_type in self.dataset_info_types:
+			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames)
+			dataset_infos.append(dataset_info)
+		dataset = self.dataset_type(infos=dataset_infos, train=True, transform_rgb=transform_rgb,
+		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
+		  num_frames_cod=self.num_frames_cod, high_motion=self.high_motion, modalities=self.modalities,
+		  time_flip=self.time_flip)
+		self._reconfigure_dataloader(dataset, self.batch_size, shuffle=True)
+
+	def _reconfigure_dataloader_test(self):
+		transform_rgb = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.ToTensor(),
+			transforms.Normalize(self.mean, self.std)])
+		transform_of = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.ToTensor(), 
+			transforms.SubMeanDisplacement()])
+		transform_cod = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.ToTensor()])
+		dataset_infos = []
+		for dataset_info_type in self.dataset_info_types:
+			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames)
+			dataset_infos.append(dataset_info)
+		dataset = self.dataset_type(infos=dataset_infos, train=False, transform_rgb=transform_rgb,
+		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames,
+		  num_frames_cod=self.num_frames_cod, modalities=self.modalities)
+		self._reconfigure_dataloader(dataset, self.batch_size_test, shuffle=True)
+
+	def _reconfigure_tracker_train(self):
+		self.tracker = Tracker_classification(with_nonzeros=True)
+
+	def _reconfigure_tracker_test(self):
+		self.tracker = Tracker_classification(with_nonzeros=True)
+
+class Experiment_pretraining_fm(Base_experiment_pretraining):
+	test_epoch_zero = True
+	net = None
+	tracker = None
+	optimizer = None
+	dataset_type = None
+	def __init__(self,
+			name,
+			batch_size = 45,
+			epochs = 200,
+			learning_rate = 0.01,
+			lr_decay_scheme = 0,
+			weight_decay = 0.0005,
+			norm = 'BN',
+			data_key = 'all',
+			source = 'l',
+			num_frames = 10,
+			num_frames_cod = 4,
+			rgb = 0.3,
+			split_channels = False,
+			dropout = 0.5,
+			use_rand = True,
+			layer = 'fc6',
+			max_shift = 0,
+			kernel_size = 0,
+			remove_motion = False,
+			cutout_center = 0, 
+			curriculum = 0,
+			modalities = ['rgb', 'of'],
+			union = False, 
+			high_motion = False,
+			time_flip = False,
+			similarity_scheme = 'cosine',
+			negatives_same_domain = False,
+			no_positive = False,
+			push_outwards = False,
+			split = 1,
+			lamb_norm = 1,
+			weight_pos = 0.5,
+			leaky_relu = False,
+			eps = 0.001,
+			ada_weight_pos = False,
+			ada_weight_pos_intervall = 2,
+			gradient_dot = 'balanced'
+		):
+		super(Experiment_pretraining_fm, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
+			norm=norm, data_key=data_key, source=source, rgb=rgb, split_channels=split_channels, 
+			dropout=dropout, use_rand=use_rand)
+		self.num_frames = num_frames
+		self.num_frames_cod = num_frames_cod
+		self.layer = layer
+		self.max_shift = max_shift
+		self.kernel_size = kernel_size
+		self.remove_motion = remove_motion
+		self.cutout_center = cutout_center
+		self.curriculum = curriculum
+		self.modalities = modalities
+		self.union = union
+		self.high_motion = high_motion
+		self.time_flip = time_flip
+		self.similarity_scheme = similarity_scheme
+		self.negatives_same_domain = negatives_same_domain
+		self.no_positive = no_positive
+		self.push_outwards = push_outwards
+		self.split = split
+		self.lamb_norm = lamb_norm
+		self.weight_pos = weight_pos
+		self.leaky_relu = leaky_relu
+		self.eps = eps
+		self.ada_weight_pos = ada_weight_pos
+		self.ada_weight_pos_intervall = ada_weight_pos_intervall
+		self.gradient_dot = gradient_dot
+		self.list_infos += [('num_frames', num_frames), ('num_frames_cod', num_frames_cod), 
+			('layer', layer), ('max_shift', max_shift), ('kernel_size', kernel_size), 
+			('remove_motion', remove_motion), ('cutout_center', cutout_center), ('curriculum', curriculum), 
+			('modalities', modalities), ('union', union), ('high_motion', high_motion), 
+			('time_flip', time_flip),('similarity_scheme', similarity_scheme),
+			('negatives_same_domain', negatives_same_domain), ('no_positive', no_positive), 
+			('push_outwards', push_outwards), ('split', split), ('weight_pos', weight_pos),
+			('lamb_norm', lamb_norm), ('leaky_relu', leaky_relu), ('eps', eps), 
+			('ada_weight_pos', ada_weight_pos), ('ada_weight_pos_intervall', ada_weight_pos_intervall),
+			('gradient_dot', gradient_dot)]
+		self.net = Siamese_fm(norm=self.norm, num_frames=self.num_frames,num_frames_cod=self.num_frames_cod,
+			dropout=self.dropout, layer=self.layer, modalities=self.modalities, union=self.union, 
+			similarity_scheme=self.similarity_scheme, 
+			negatives_same_domain=self.negatives_same_domain, no_positive=self.no_positive,
+			push_outwards=self.push_outwards, leaky_relu=leaky_relu, eps=self.eps)
+		self.tracker = Tracker_similarity()
+		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
+			momentum=0.9, weight_decay=self.weight_decay)
+		self.dataset_type = Dataset_fm
+		self.criterion_norm = nn.MSELoss()
+
+	def _get_data(self, iterator):
+		samples = next(iterator, None)
+		if samples is None:
+			return None, None
+		data = []
+		for field in samples:
+			field = torch.cat(field, dim=0).cuda()
+			field = Variable(field)
+			data.append(field)
+		return data, None
+	
+	# This code removes CPU bottleneck 
+	# def _get_data(self, iterator):
+	# 	if not hasattr(self, 'length_iterator'):
+	# 		self.length_iterator = 0
+	# 		print(len(iterator))
+	# 	self.length_iterator += 1
+	# 	if self.length_iterator > len(iterator):
+	# 		self.length_iterator = 0
+	# 		return None, None
+	# 	data_3 = torch.Tensor(30,3,224,224).cuda()
+	# 	data_20 = torch.Tensor(30,20,224,224).cuda()
+	# 	var_3_1 = Variable(data_3)
+	# 	var_3_2 = Variable(data_3)
+	# 	var_20_1 = Variable(data_20)
+	# 	var_20_2 = Variable(data_20)
+	# 	data = [var_3_1, var_20_1, var_3_2, var_20_2]
+	# 	return data, None
+
+	def _get_loss(self, output, labels):
+		norms = output[-1]
+		output = output[:-1]
+		loss_norm = 0
+		if self.lamb_norm != 0:
+			for norm in norms:
+				labels_one = Variable(torch.FloatTensor(norm.size()).zero_().cuda() + 30)
+				loss_norm += self.criterion_norm(norm, labels_one)
+		half = int(len(output) / 2)
+		sim_true = 0
+		sim_false = 0
+		for i in range(half):
+			sim_true += self._distance_transformation(output[i], True)
+			sim_false += self._distance_transformation(output[half + i], False)
+		self._update_ada_weight_pos(output)
+		loss_sim = 2*torch.mean(sim_false*(1-self.weight_pos) - sim_true*self.weight_pos, dim=0) / half
+		return loss_sim + self.lamb_norm * loss_norm
+
+	def _distance_transformation(self, sim, close):
+		if self.gradient_dot == 'balanced':
+			return sim
+		if self.gradient_dot == 'euclidean':
+			return 1 - torch.sqrt(2-2*sim + self.eps)
+		if self.gradient_dot == 'high_close':
+			return sim ** 2
+		if self.gradient_dot == 'high_far':
+			return 1-(1-sim)**2
+		if self.gradient_dot == 'mixed':
+			if close:
+				return sim ** 2
+			else:
+				return 1-(1-sim)** 2
+		if self.gradient_dot == 'mixed_anti':
+			if not close:
+				return sim ** 2
+			else:
+				return 1-(1-sim)** 2
+
+	def _reset_ada_weight_pos(self):
+		self.sim_true = 0
+		self.sim_false = 0
+		self.ada_weight_pos_counter = 0
+
+	def _update_ada_weight_pos(self, output):
+		half = int(len(output) / 2)
+		sim_true = 0
+		sim_false = 0
+		for i in range(half):
+			sim_true += output[i].data
+			sim_false += output[half + i].data
+		sim_true /= half
+		sim_false /= half
+		if not hasattr(self, 'sim_true'):
+			self._reset_ada_weight_pos()
+		if self.is_training:
+			self.sim_true += torch.mean(sim_true)
+			self.sim_false += torch.mean(sim_false)
+			self.ada_weight_pos_counter += 1
+
+	def _result_ada_weight_pos(self):
+		if hasattr(self, 'ada_weight_pos_counter') and self.ada_weight_pos_counter != 0:
+			if self.epoch % self.ada_weight_pos_intervall == 0:
+				self.sim_true /= self.ada_weight_pos_counter
+				self.sim_false /= self.ada_weight_pos_counter
+				diff = self.sim_true - self.sim_false
+				if self.ada_weight_pos:
+					self.weight_pos = (2+diff) / 4
+					print('set weight_pos to: ', self.weight_pos)
+				self._reset_ada_weight_pos()
+
+
+	def _gen_feature_mat(self, mode):
+		raise Exception('deprecated')
+		print('generating feature_mat')
+		self.net.cuda()
+		self.net.train(mode=False)
+		self._reconfigure_dataloader_fm(mode)
+		iterator = iter(self.dataloader)
+		feature_mat = []
+		while(True):
+			data, labels = self._get_data_fm(iterator)
+			if data is None:
+				break
+			# import ipdb; ipdb.set_trace()
+			output = self._get_subnet(mode).get_fc6_features(*data)
+			output = output.view(output.size(0), -1).data
+			output = output.mean(dim=0, keepdim=True)
+			feature_mat.append(output)
+		feature_mat = torch.cat(feature_mat, dim=0)
+		self.net.cpu()
+
+	def _gen_nn_mat(self, mode):
+		feature_mat = self.gen_feature_mat(mode)
+		trust_region = 100
+		length = self.feature_mat.size()[0]
+		nn_mat = torch.LongTensor(length, trust_region)
+		for i in range(length):
+			values, indices = utils.cos_sim(feature_mat[i:i+1], feature_mat).sort(descending=True)
+			nn_mat[i] = indices[:trust_region].cpu()
+		return nn_mat
+
+	def save_nn_mat(self):
+		for mode in ['RGB', 'OF']:
+			nn_mat = self._gen_nn_mat(mode)
+			path = os.path.join(self.results_dir, 'similarity_matrices_%d.mat' %self.load_epoch)
+			self._savemat(self.similarity_matrices, path)
+
+	def _get_data_fm(self, iterator):
+		images, labels = next(iterator, (None, None))
+		if images is None:
+			return None, None
+		images = torch.cat(images, dim=0)
+		labels = torch.cat(labels, dim=0)	
+		images, labels = Variable(images).cuda(), Variable(labels).cuda()
+		return [images], None
+
+	def _reconfigure_dataloader_train(self):
+		rgb = self.rgb
+		transform_rgb = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size, max_shift=5*self.max_shift),
+			transforms.RandomHorizontalFlip(), 
+			self.transform_color,
+			transforms.ToTensor(),
+			transforms.Normalize(self.mean, self.std)])
+		transform_of = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size, max_shift=5*self.max_shift),
+			transforms.RandomHorizontalFlip(), 
+			transforms.Smoothen(self.kernel_size),
+			transforms.ToTensor(), 
+			transforms.SubMeanDisplacement()])
+		transform_cod = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.RandomCrop(self.net.input_spatial_size),
+			transforms.RandomHorizontalFlip(), 
+			transforms.ToTensor()])
+		dataset_infos = []
+		for dataset_info_type in self.dataset_info_types:
+			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames,
+				split=self.split)
+			dataset_infos.append(dataset_info)
+		dataset = self.dataset_type(infos=dataset_infos, train=True, transform_rgb=transform_rgb,
+		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
+		  num_frames_cod=self.num_frames_cod, max_shift=self.max_shift, remove_motion=self.remove_motion, 
+		  cutout_center=self.cutout_center, modalities=self.modalities, high_motion=self.high_motion,
+		  time_flip=self.time_flip)
+		self._reconfigure_dataloader(dataset, self.batch_size, shuffle=True)
+
+	def _reconfigure_dataloader_test(self):
+		transform_rgb = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.ToTensor(),
+			transforms.Normalize(self.mean, self.std)])
+		transform_of = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.Smoothen(self.kernel_size),
+			transforms.ToTensor(), 
+			transforms.SubMeanDisplacement()])
+		transform_cod = transforms.Compose([
+			transforms.Scale(256), 
+			transforms.CenterCrop(self.net.input_spatial_size),
+			transforms.ToTensor()])
+		dataset_infos = []
+		for dataset_info_type in self.dataset_info_types:
+			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames,
+				split=self.split)
+			dataset_infos.append(dataset_info)
+		dataset = self.dataset_type(infos=dataset_infos, train=False, transform_rgb=transform_rgb,
+		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
+		  num_frames_cod=self.num_frames_cod, remove_motion=self.remove_motion, 
+		  cutout_center=self.cutout_center, modalities=self.modalities)
+		self._reconfigure_dataloader(dataset, self.batch_size_test, shuffle=True)
+
+	def _reconfigure_dataloader_fm(self, mode):
+		self.dataloader = None
+		dataset_infos = []
+		for dataset_info_type in self.dataset_info_types:
+			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames,
+				split=self.split)
+			dataset_infos.append(dataset_info)
+		if mode == 'RGB':
+			transform_rgb = transforms.Compose([
+				transforms.Scale(256), 
+				transforms.TenCrop(self.net.input_spatial_size),
+				transforms.ToTensor(),
+				transforms.Normalize(self.mean, self.std)])
+			dataset = Dataset_RGB(infos=dataset_infos, train=False, transform=transform_rgb, num_test=5)
+		elif mode == 'OF':	
+			transform_of = transforms.Compose([
+				transforms.Scale(256), 
+				transforms.TenCrop(self.net.input_spatial_size),
+				transforms.Smoothen(self.kernel_size),
+				transforms.ToTensor(), 
+				transforms.SubMeanDisplacement()])
+			dataset = Dataset_OF(infos=dataset_infos, train=False, transform=transform_of, num_test=5,
+				num_frames=self.num_frames, num_frames_cod=self.num_frames_cod, 
+				remove_motion=self.remove_motion, cutout_center=self.cutout_center)
+		self._reconfigure_dataloader(dataset, 1, shuffle=True)	
+
+	def _get_subnet(self, mode):
+		if mode == 'RGB':
+			return self.net.app_net
+		elif mode == 'OF':
+			return self.net.mot_net
+
+	def _set_layer_curriculum(self):
+		scheme_0 = []
+		scheme_1 = [(0/15, 'conv5'), (1/15, 'pool5'), (2/15, 'fc6'), (7/15, 'fc7')]
+		schemes = [scheme_0, scheme_1]
+		for frac, layer in schemes[self.curriculum]:
+			if self.epoch == int(self.epochs * frac):
+				self.net.set_layer(layer)
+				print('Set layer to %s' %layer)
+
+	def _apply_per_epoch(self):
+		super(Experiment_pretraining_fm, self)._apply_per_epoch()
+		self._set_layer_curriculum()
+		self._result_ada_weight_pos()
+
+
+	def _reconfigure_tracker_train(self):
+		if len(self.modalities) == 2:
+			names = ['p', 'n']
+		elif len(self.modalities) == 3:
+			names = ['p', 'p', 'p', 'n', 'n', 'n']	
+		self.tracker = Tracker_similarity(names)
+
+	def _reconfigure_tracker_test(self):
+		if len(self.modalities) == 2:
+			names = ['p', 'n']
+		elif len(self.modalities) == 3:
+			names = ['p', 'p', 'p', 'n', 'n', 'n']	
+		self.tracker = Tracker_similarity(names)
+
+	def _track_per_iteration(self, output, labels, loss):
+		norms = output[-1]
+		output = output[:-1]
+		sum_norm = 0
+		for norm in norms:
+			sum_norm += norm
+		sum_norm = float(sum_norm / len(norms))
+		norm = sum_norm
+		similarities = np.zeros(2)
+		for i in range(2):
+			if len(output) != 2:
+				similarity = (output[2*i] + output[2*i+1]) / 2
+			else:
+				similarity = output[i]
+			if i == 0:
+				length = similarity.size()[0]
+			similarities[i] += torch.sum(similarity, dim=0).data.cpu().numpy()
+		if loss is not None:
+			loss = float(loss.data.cpu())
+		norm /= length
+		similarities /= length
+		result = [('loss', loss), ('norm', norm), ('p', similarities[0]), ('n', similarities[1])]
+		delimiter = ' '
+		path = os.path.join(self.results_dir, 'train_iter.txt')
+		f = open(path, 'a')
+		f.write(utils.print_iterable(result, delimiter=' ', max_digits=self.max_digits, print_keys=False))
+		f.write('\n')
+		f.close()	
+
+if __name__ == "__main__":
+	e = Experiment_pretraining_def('test_def', batch_size=10, source='s')
+	e.run()
