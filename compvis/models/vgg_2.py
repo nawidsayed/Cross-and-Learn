@@ -1607,8 +1607,7 @@ class Siamese(Base_Siamese):
 class Siamese_fm(Base_Siamese):
     def __init__(self, norm='BN', layer='fc6', num_frames=12, num_frames_cod=4, dropout=0.5,
         modalities=['rgb', 'of'], union=False, decoder=False, similarity_scheme='cosine', 
-        negatives_same_domain=0, no_positive=False, push_outwards=False, leaky_relu=False, 
-        eps=0.001, ):
+        leaky_relu=False, eps=0.001, ):
         super(Siamese_fm, self).__init__(norm=norm, num_frames=num_frames, 
             num_frames_cod=num_frames_cod, dropout=dropout, modalities=modalities,
             decoder=decoder, leaky_relu=leaky_relu)
@@ -1617,9 +1616,6 @@ class Siamese_fm(Base_Siamese):
         self.layer = layer
         self.union = union
         self.similarity_scheme = similarity_scheme
-        self.negatives_same_domain = negatives_same_domain
-        self.no_positive = no_positive
-        self.push_outwards = push_outwards
         self.eps = eps
         self._set_similarity_func()
 
@@ -1677,39 +1673,16 @@ class Siamese_fm(Base_Siamese):
         # print(float(feat_mean), float(nonzero))
 
 
-
-
-
         if len(self.modalities) == 2:
             s = features[0].size(1)
             if self.union:
                 s = int(s / 2)
-            if not self.no_positive:
-                sim_true_1 = self.sim_func(features[0][:,:s], features[1][:,:s])      #   1
-                sim_true_2 = self.sim_func(features[2][:,:s], features[3][:,:s])      #   1
-            else:
-                sim_true_1_t = self.sim_func(features[0][:,:s], features[1][:,:s])      #   1
-                sim_true_2_t = self.sim_func(features[2][:,:s], features[3][:,:s])      #   1
-                sim_true_1 = sim_true_1_t * 0
-                sim_true_2 = sim_true_2_t * 0 
-            if not self.negatives_same_domain:
-                sim_false_1 = self.sim_func(features[0][:,:s], features[3][:,:s]) #   2
-                sim_false_2 = self.sim_func(features[2][:,:s], features[1][:,:s]) #   2
-            else:
-                if not self.push_outwards:
-                    sim_false_1 = self.sim_func(features[0][:,:s], features[2][:,:s]) #   2
-                    sim_false_2 = self.sim_func(features[1][:,:s], features[3][:,:s]) #   2
-                else:
-                    feat = torch.Tensor(features[2].size()).zero_().cuda()+1
-                    feat /= np.sqrt(features[0].size(1))
-                    feat = Variable(feat)
-                    sim_false_1 = self.sim_func(features[0][:,:s], feat[:,:s]) #   2
-                    sim_false_2 = self.sim_func(features[1][:,:s], feat[:,:s]) #   2                    
+            sim_true_1 = self.sim_func(features[0][:,:s], features[1][:,:s])      #   1
+            sim_true_2 = self.sim_func(features[2][:,:s], features[3][:,:s])      #   1
+            sim_false_1 = self.sim_func(features[0][:,:s], features[2][:,:s]) #   2
+            sim_false_2 = self.sim_func(features[1][:,:s], features[3][:,:s]) #   2                  
             final_sim_true_1 = (sim_true_1 + sim_true_2) / 2
             final_sim_false_1 = (sim_false_1 + sim_false_2) / 2
-
-
-            # print(final_sim_true_1, final_sim_false_1)
 
             return sim_true_1, sim_true_2, sim_false_1, sim_false_2, nonzeros
 

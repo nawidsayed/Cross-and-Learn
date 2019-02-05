@@ -181,7 +181,6 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			similarity_scheme = 'cosine',
 			negatives_same_domain = False,
 			no_positive = False,
-			push_outwards = False,
 			split = 1,
 			lamb_norm = 1,
 			weight_pos = 0.5,
@@ -208,9 +207,6 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		self.high_motion = high_motion
 		self.time_flip = time_flip
 		self.similarity_scheme = similarity_scheme
-		self.negatives_same_domain = negatives_same_domain
-		self.no_positive = no_positive
-		self.push_outwards = push_outwards
 		self.split = split
 		self.lamb_norm = lamb_norm
 		self.weight_pos = weight_pos
@@ -224,16 +220,13 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			('remove_motion', remove_motion), ('cutout_center', cutout_center), ('curriculum', curriculum), 
 			('modalities', modalities), ('union', union), ('high_motion', high_motion), 
 			('time_flip', time_flip),('similarity_scheme', similarity_scheme),
-			('negatives_same_domain', negatives_same_domain), ('no_positive', no_positive), 
-			('push_outwards', push_outwards), ('split', split), ('weight_pos', weight_pos),
+			('split', split), ('weight_pos', weight_pos),
 			('lamb_norm', lamb_norm), ('leaky_relu', leaky_relu), ('eps', eps), 
 			('ada_weight_pos', ada_weight_pos), ('ada_weight_pos_intervall', ada_weight_pos_intervall),
 			('gradient_dot', gradient_dot)]
 		self.net = Siamese_fm(norm=self.norm, num_frames=self.num_frames,num_frames_cod=self.num_frames_cod,
 			dropout=self.dropout, layer=self.layer, modalities=self.modalities, union=self.union, 
-			similarity_scheme=self.similarity_scheme, 
-			negatives_same_domain=self.negatives_same_domain, no_positive=self.no_positive,
-			push_outwards=self.push_outwards, leaky_relu=leaky_relu, eps=self.eps)
+			similarity_scheme=self.similarity_scheme, leaky_relu=leaky_relu, eps=self.eps)
 		self.tracker = Tracker_similarity()
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
 			momentum=0.9, weight_decay=self.weight_decay)
