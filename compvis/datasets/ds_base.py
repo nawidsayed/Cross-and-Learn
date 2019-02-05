@@ -51,29 +51,6 @@ def sample_high_motion(list_mag, num_frames, mode=1):
 		ind_frame += 1
 	return ind_frame
 
-# TODO use first sample_indices
-
-# def sample_indices(num_frames, spacing):
-# 	spacing -= 1
-# 	indices = [0]
-# 	left = np.arange(spacing+1, num_frames-3*spacing)
-# 	np.random.shuffle(left)
-# 	left = left[:3]
-# 	left.sort()
-# 	for i in range(3):
-# 		left[i] += i * spacing
-# 	left = list(left)
-# 	indices += left
-# 	indices.append(num_frames)
-# 	return np.array(indices)
-
-
-# def sample_indices(num_frames, spacing):
-# 	center = int(num_frames/2)
-# 	spacing -= 1
-# 	indices = [0, center-1, center, center+1, num_frames]
-# 	return np.array(indices)
-
 # stack is a list only containing the stack
 def rand_timeflip(stack, rand, channels):
 	if rand > 0.5:		
@@ -253,7 +230,25 @@ class Dataset_OF(Base_Dataset):
 					num_test = -self.num_test
 					ind_frames_first = np.arange(0, num_rgb-self.num_frames, num_test).astype(np.int32)
 
-		buffers_norms = []
+		# buffers_norms = []
+		# path_frames = []
+		# for ind_frame_first in ind_frames_first:
+		# 	if self.transform_rgb is not None:
+		# 		path_frames.append(info.get_rgb_path(index, ind_frame_first))
+		# 	for i in range(self.num_frames):
+		# 		for direction in ['x', 'y']:
+		# 			ind_frame = ind_frame_first + i
+		# 			key_of = info.get_of_key(index, ind_frame, direction)
+		# 			buf = self._get_buf(key_of)
+		# 			norm = info.get_norm(index, ind_frame)
+		# 			buffers_norms.append((buf, norm))
+		# if path_frames == []:
+		# 	return buffers_norms, info.get_label(index)
+		# else:
+		# 	return path_frames, buffers_norms, info.get_label(index)
+		
+
+		path_flows_norms = []
 		path_frames = []
 		for ind_frame_first in ind_frames_first:
 			if self.transform_rgb is not None:
@@ -261,23 +256,22 @@ class Dataset_OF(Base_Dataset):
 			for i in range(self.num_frames):
 				for direction in ['x', 'y']:
 					ind_frame = ind_frame_first + i
-					key_of = info.get_of_key(index, ind_frame, direction)
-					buf = self._get_buf(key_of)
+					path_flow = info.get_of_path(index, ind_frame, direction)
 					norm = info.get_norm(index, ind_frame)
-					buffers_norms.append((buf, norm))
+					path_flows_norms.append((path_flow, norm))
 		if path_frames == []:
-			return buffers_norms, info.get_label(index)
+			return path_flows_norms, info.get_label(index)
 		else:
-			return path_frames, buffers_norms, info.get_label(index)
+			return path_frames, path_flows_norms, info.get_label(index)
 
 	def preprocess(self, raw):
 		raw = list(raw)
 		if self.transform_rgb is None:
 			if len(raw) == 2:
-				buffers_norms, label = raw
+				path_flows_norms, label = raw
 				random = np.random.RandomState()
 			else:
-				buffers_norms, label, random = raw
+				path_flows_norms, label, random = raw
 		else:
 			path_frames, buffers_norms, label = raw
 			random = np.random.RandomState()
@@ -286,9 +280,8 @@ class Dataset_OF(Base_Dataset):
 		if self.time_flip and self.train:
 			rand_flip = np.random.rand()
 		images = []
-		for buf, norm in buffers_norms:
-			buf.seek(0)
-			img = Image.open(buf)
+		for path_flow, norm in path_flows_norms:
+			img = Image.open(path_flow)
 			img.load()
 			random.set_state(randomstate)
 			img = self.transform(img, random)
@@ -332,6 +325,69 @@ class Dataset_OF(Base_Dataset):
 				else:
 					images.append(img)
 			return flows, label, images
+
+	# def preprocess(self, raw):
+	# 	raw = list(raw)
+	# 	if self.transform_rgb is None:
+	# 		if len(raw) == 2:
+	# 			buffers_norms, label = raw
+	# 			random = np.random.RandomState()
+	# 		else:
+	# 			buffers_norms, label, random = raw
+	# 	else:
+	# 		path_frames, buffers_norms, label = raw
+	# 		random = np.random.RandomState()
+	# 	randomstate = random.get_state() 
+	# 	rand_flip = 0
+	# 	if self.time_flip and self.train:
+	# 		rand_flip = np.random.rand()
+	# 	images = []
+	# 	for buf, norm in buffers_norms:
+	# 		buf.seek(0)
+	# 		img = Image.open(buf)
+	# 		img.load()
+	# 		random.set_state(randomstate)
+	# 		img = self.transform(img, random)
+	# 		if isinstance(img, list):
+	# 			num_crops = len(img)
+	# 			for flow in img:
+	# 				images.append(flow * norm)
+	# 		else:
+	# 			num_crops = 1
+	# 			images.append(img * norm)
+	# 	num_samples = int(len(images) / (2*self.num_frames*num_crops))
+	# 	flows = []
+	# 	for i in range(num_samples):
+	# 		for j in range(num_crops):
+	# 			flow = torch.cat(images[j::num_crops][(2*self.num_frames)*i:(2*self.num_frames)*(i+1)], 0)
+	# 			if self.remove_motion:
+	# 				flow_nomot = flow.clone()
+	# 				for k in range(self.num_frames):
+	# 					flow_nomot_single = torch.sqrt(flow[2*k]**2 + flow[2*k+1]**2)
+	# 					flow_nomot[2*k] = flow_nomot_single
+	# 					flow_nomot[2*k+1] = flow_nomot_single
+	# 				flow = flow_nomot
+	# 			if self.cutout_center != 0:
+	# 				center = int(self.num_frames)
+	# 				space = self.cutout_center
+	# 				flow[center-space:center+space] = 0
+	# 			flows.append(flow)
+	# 	flows = rand_timeflip(flows, rand_flip, 2)
+	# 	num = len(flows)
+	# 	label = num * [label]
+	# 	if self.transform_rgb is None:
+	# 		return flows, label		
+	# 	else:
+	# 		images = []
+	# 		for path_frame in path_frames:
+	# 			img = prep_image(path_frame)
+	# 			random.set_state(randomstate)
+	# 			img = self.transform_rgb(img, random)
+	# 			if isinstance(img, list): 
+	# 				images += img
+	# 			else:
+	# 				images.append(img)
+	# 		return flows, label, images
 
 	def get_sample(self, index):
 		return self.preprocess(self[index])[0][0]
@@ -504,8 +560,8 @@ class Dataset_fm(Base_Dataset):
 		self.modalities = modalities
 		self.high_motion = high_motion
 		self.time_flip = time_flip
-		if num_frames_cod > num_frames:
-			raise Exception('num_frames must be bigger than num_frames_cod')
+		# if num_frames_cod > num_frames:
+		# 	raise Exception('num_frames must be bigger than num_frames_cod')
 		if 'rgb' in modalities:
 			self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
 		if 'of' in modalities:

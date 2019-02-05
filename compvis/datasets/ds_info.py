@@ -7,21 +7,6 @@ __all__ = ['UCF101_i', 'HMDB51_i', 'ACT_i', 'Leeds_i', 'OlympicSports_i']
 # train = None returns combined train and test set
 # source allows for different modes in dataset
 
-def get_frame_indices(num_test, num_rgb, num_frames):
-	if num_test >= 0:
-		num_test = num_test
-		ind_frames_first = np.linspace(0, num_rgb-num_frames-1, num_test).astype(np.int32)
-		return ind_frames_first
-	else:
-		num_test = -num_test
-		ind_frames_first = np.arange(0, num_rgb-num_frames, num_test).astype(np.int32)
-		return ind_frames_first
-
-def get_label_index(num_test, num_rgb, num_frames, ind_frame):
-	indices = get_frame_indices(num_test, num_rgb, num_frames)
-	indices_dist = np.abs(indices - ind_frame + int(num_frames/2))
-	return np.argsort(indices_dist)[0]
-
 class Base_Info(object):
 	def __init__(self, train=True, source='l'):
 		self.train = train
@@ -41,6 +26,9 @@ class Base_Info_Video(Base_Info):
 	def get_rgb_path(self, index, ind_frame):
 		raise NotImplementedError('Base_Info_Video should implement get_rgb_path')
 
+	def get_of_path(self, index, ind_frame, direction):
+		raise NotImplementedError('Base_Info_Video should implement get_of_path')
+
 	def get_of_key(self, index, ind_frame, direction):
 		raise NotImplementedError('Base_Info_Video should implement get_of_key')
 
@@ -53,21 +41,12 @@ class Base_Info_Video(Base_Info):
 	def get_mag(self, index):
 		raise NotImplementedError('Base_Info_Video should implement get_mag')
 
-	def get_msd(self, index, ind_frame):
-		raise NotImplementedError('Base_Info_Video should implement get_msd')
-
-	def get_list_3rd_max_msd(self, index):
-		raise NotImplementedError('Base_Info_Video should implement get_list_3rd_max_msd')
-
 	def get_label(self, index, ind_frame):
 		raise NotImplementedError('Base_Info_Video should implement get_label using ind_frame')
 
-	def set_labels(self, labels, num_test):
-		raise NotImplementedError('Base_Info_Video should implement set_labels')
-
 class Base_Info_Image(Base_Info):
 	def get_image_path(self, index):
-		raise NotImplementedError('Base_Info_Image should implement get_rgb_path')
+		raise NotImplementedError('Base_Info_Image should implement get_image_path')
 
 class UCF101_i(Base_Info_Video):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF101/images'
@@ -133,16 +112,8 @@ class UCF101_i(Base_Info_Video):
 		return self.len
 
 	def get_label(self, index, ind_frame=None):
-		if not hasattr(self, 'labels_num_test'):
-			item_name = self.list_items[index]
-			return int(self.dict_label[item_name])
-		else:
-			item_name = self.list_items[index]
-			label_array = self.dict_label[item_name]
-			if ind_frame is None:
-				ind_frame = 0
-			ind = get_label_index(self.labels_num_test, self.get_num_rgb(index), self.num_frames, ind_frame)
-			return int(label_array[ind])
+		item_name = self.list_items[index]
+		return int(self.dict_label[item_name])
 
 	def get_data_cache(self):
 		return pickle.load(open(os.path.join(self.path_data, 'dict_data_'+self.source+'.pkl'), 'rb'))
@@ -174,28 +145,6 @@ class UCF101_i(Base_Info_Video):
 			key = '%s_%d' %(item_name, i)
 			mag.append(self.dict_mag[key])
 		return mag
-
-	def get_msd(self, index, ind_frame):
-		if not hasattr(self, 'dict_msd'):
-			self.dict_msd = pickle.load(open(os.path.join(self.path_data, 
-				'dict_msd_small_'+ 'l' +'.pkl'), 'rb'))
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_msd[key]
-
-	def get_list_3rd_max_msd(self, index):
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_list_3rd_max_msd[key]
-
-	def set_labels(self, labels, num_test):
-		if self.len != len(labels):
-			raise Exception('Dateset_infos initialized differently %d, %d' %(self.len, len(labels)))
-		self.dict_label = {}
-		for index in range(self.len):
-			item_name = self.list_items[index]
-			self.dict_label[item_name] = labels[index]
-		self.labels_num_test = num_test
 
 class HMDB51_i(Base_Info_Video):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/HMDB51/images'
@@ -250,16 +199,8 @@ class HMDB51_i(Base_Info_Video):
 		return self.len
 
 	def get_label(self, index, ind_frame=None):
-		if not hasattr(self, 'labels_num_test'):
-			item_name = self.list_items[index]
-			return int(self.dict_label[item_name])
-		else:
-			item_name = self.list_items[index]
-			label_array = self.dict_label[item_name]
-			if ind_frame is None:
-				ind_frame = 0
-			ind = get_label_index(self.labels_num_test, self.get_num_rgb(index), self.num_frames, ind_frame)
-			return int(label_array[ind])
+		item_name = self.list_items[index]
+		return int(self.dict_label[item_name])
 
 	def get_data_cache(self):
 		return pickle.load(open(os.path.join(self.path_data, 'dict_data_'+self.source+'.pkl'), 'rb'))
@@ -291,28 +232,6 @@ class HMDB51_i(Base_Info_Video):
 			key = '%s_%d' %(item_name, i)
 			mag.append(self.dict_mag[key])
 		return mag
-
-	def get_msd(self, index, ind_frame):
-		if not hasattr(self, 'dict_msd'):
-			self.dict_msd = pickle.load(open(os.path.join(self.path_data, 
-				'dict_msd_small_'+ 'l' +'.pkl'), 'rb'))
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_msd[key]
-
-	def get_list_3rd_max_msd(self, index):
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_list_3rd_max_msd[key]
-
-	def set_labels(self, labels, num_test):
-		if self.len != len(labels):
-			raise Exception('Dateset_infos initialized differently %d, %d' %(self.len, len(labels)))
-		self.dict_label = {}
-		for index in range(self.len):
-			item_name = self.list_items[index]
-			self.dict_label[item_name] = labels[index]
-		self.labels_num_test = num_test
 
 class ACT_i(Base_Info_Video):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/ACT/images'
@@ -359,16 +278,8 @@ class ACT_i(Base_Info_Video):
 		return self.len
 
 	def get_label(self, index, ind_frame=None):
-		if not hasattr(self, 'labels_num_test'):
-			item_name = self.list_items[index]
-			return int(self.dict_label[item_name])
-		else:
-			item_name = self.list_items[index]
-			label_array = self.dict_label[item_name]
-			if ind_frame is None:
-				ind_frame = 0
-			ind = get_label_index(self.labels_num_test, self.get_num_rgb(index), self.num_frames, ind_frame)
-			return int(label_array[ind])
+		item_name = self.list_items[index]
+		return int(self.dict_label[item_name])
 
 	def get_data_cache(self):
 		return pickle.load(open(os.path.join(self.path_data, 'dict_data_'+self.source+'.pkl'), 'rb'))
@@ -400,28 +311,6 @@ class ACT_i(Base_Info_Video):
 			key = '%s_%d' %(item_name, i)
 			mag.append(self.dict_mag[key])
 		return mag
-
-	def get_msd(self, index, ind_frame):
-		if not hasattr(self, 'dict_msd'):
-			self.dict_msd = pickle.load(open(os.path.join(self.path_data, 
-				'dict_msd_small_'+ 'l' +'.pkl'), 'rb'))
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_msd[key]
-
-	def get_list_3rd_max_msd(self, index):
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_list_3rd_max_msd[key]
-
-	def set_labels(self, labels, num_test):
-		if self.len != len(labels):
-			raise Exception('Dateset_infos initialized differently %d, %d' %(self.len, len(labels)))
-		self.dict_label = {}
-		for index in range(self.len):
-			item_name = self.list_items[index]
-			self.dict_label[item_name] = labels[index]
-		self.labels_num_test = num_test
 
 class OlympicSports_i(Base_Info_Video):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/OlympicSports/images'
@@ -477,16 +366,8 @@ class OlympicSports_i(Base_Info_Video):
 		return self.len
 
 	def get_label(self, index, ind_frame=None):
-		if not hasattr(self, 'labels_num_test'):
-			item_name = self.list_items[index]
-			return int(self.dict_label[item_name])
-		else:
-			item_name = self.list_items[index]
-			label_array = self.dict_label[item_name]
-			if ind_frame is None:
-				ind_frame = 0
-			ind = get_label_index(self.labels_num_test, self.get_num_rgb(index), self.num_frames, ind_frame)
-			return int(label_array[ind])
+		item_name = self.list_items[index]
+		return int(self.dict_label[item_name])
 
 	def get_data_cache(self):
 		return pickle.load(open(os.path.join(self.path_data, 'dict_data_'+self.source+'.pkl'), 'rb'))
@@ -495,6 +376,12 @@ class OlympicSports_i(Base_Info_Video):
 		item_name = self.list_items[index]
 		item_folder = os.path.join(self.path_data, item_name)
 		name_frame = '%s_%d.jpg' %(item_name, ind_frame+1)
+		return os.path.join(item_folder, name_frame)	
+
+	def get_of_path(self, index, ind_frame, direction):
+		item_name = self.list_items[index]
+		item_folder = os.path.join(self.path_data, item_name + '_flow')
+		name_frame = '%s_%s_%d.png' %(item_name, direction, ind_frame+1)
 		return os.path.join(item_folder, name_frame)	
 
 	def get_of_key(self, index, ind_frame, direction):
@@ -518,28 +405,6 @@ class OlympicSports_i(Base_Info_Video):
 			key = '%s_%d' %(item_name, i)
 			mag.append(self.dict_mag[key])
 		return mag
-
-	def get_msd(self, index, ind_frame):
-		if not hasattr(self, 'dict_msd'):
-			self.dict_msd = pickle.load(open(os.path.join(self.path_data, 
-				'dict_msd_small_'+ 'l' +'.pkl'), 'rb'))
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_msd[key]
-
-	def get_list_3rd_max_msd(self, index):
-		item_name = self.list_items[index]
-		key = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_list_3rd_max_msd[key]
-
-	def set_labels(self, labels, num_test):
-		if self.len != len(labels):
-			raise Exception('Dateset_infos initialized differently %d, %d' %(self.len, len(labels)))
-		self.dict_label = {}
-		for index in range(self.len):
-			item_name = self.list_items[index]
-			self.dict_label[item_name] = labels[index]
-		self.labels_num_test = num_test
 
 class Leeds_i(Base_Info_Image):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/LEEDS/lsp_dataset_original'
