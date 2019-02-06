@@ -29,9 +29,6 @@ class Base_Info_Video(Base_Info):
 	def get_of_path(self, index, ind_frame, direction):
 		raise NotImplementedError('Base_Info_Video should implement get_of_path')
 
-	def get_of_key(self, index, ind_frame, direction):
-		raise NotImplementedError('Base_Info_Video should implement get_of_key')
-
 	def get_norm(self, index, ind_frame):
 		raise NotImplementedError('Base_Info_Video should implement get_norm')
 
@@ -48,10 +45,112 @@ class Base_Info_Image(Base_Info):
 	def get_image_path(self, index):
 		raise NotImplementedError('Base_Info_Image should implement get_image_path')
 
+# class UCF101_i(Base_Info_Video):
+# 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF101/images'
+# 	path_data_flow = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF101/flow'
+# 	path_infos = '/export/home/nsayed/data/UCF101'
+# 	def __init__(self, train=True, split=1, source='l', num_frames=12, min_msd=0):
+# 		super(UCF101_i, self).__init__(train=train, source=source)
+# 		self.split = split
+# 		self.use_groups = 100
+# 		if split < 0:
+# 			self.split = 1
+# 			self.use_groups = -split
+# 		self.num_frames = num_frames
+# 		self.min_msd = min_msd
+# 		self.dict_num = pickle.load(open(os.path.join(self.path_data, 
+# 			'dict_num_'+self.source+'.pkl'), 'rb'))
+# 		self.dict_mag = pickle.load(open(os.path.join(self.path_data, 
+# 			'dict_mag_'+ 'l' +'.pkl'), 'rb'))
+# 		self.dict_norm = pickle.load(open(os.path.join(self.path_data, 
+# 			'dict_norm_'+self.source+'.pkl'), 'rb'))
+# 		dict_names = pickle.load(open(os.path.join(self.path_data,
+# 			'dict_names_'+self.source+'_new.pkl'), 'rb'))
+# 		self.dict_list_3rd_max_msd = pickle.load(open(os.path.join(self.path_data, 
+# 			'dict_list_3rd_max_msd_'+ 'l' +'.pkl'), 'rb'))
+# 		self.dict_label = {}
+# 		for split in [1,2,3]:
+# 			info_name = 'trainlist0' + str(split) + '.txt'
+# 			raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None)		
+# 			for i in range(raw_info.shape[0]):
+# 				name = (raw_info[i][0][:-4]).decode('UTF-8')
+# 				label = raw_info[i][1] - 1
+# 				drop_first = int((len(name) - 11) / 2) + 1
+# 				name = name[drop_first:]
+# 				item_name = dict_names[name + '.avi']
+# 				self.dict_label[item_name] = label
+# 		self.list_items = []
+# 		info_names = []
+# 		if self.train or self.train is None:
+# 			info_names.append('trainlist0%d.txt' %self.split)
+# 		if not self.train or self.train is None:
+# 			info_names.append('testlist0%d.txt' %self.split)
+# 		for info_name in info_names:
+# 			self._initialize(info_name, dict_names)
+# 		self.len = len(self.list_items)
+
+# 	def _initialize(self, info_name, dict_names):
+# 		raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None)
+# 		for i in range(raw_info.shape[0]):
+# 			if info_name[:5] == 'train':
+# 				name = (raw_info[i][0][:-4]).decode('UTF-8')
+# 			else:
+# 				name = (raw_info[i][:-4]).decode('UTF-8')
+# 			drop_first = int((len(name) - 11) / 2) + 1
+# 			name = name[drop_first:]
+# 			item_name = dict_names[name + '.avi']
+# 			item_num = self.dict_num[item_name]
+# 			item_group = int(name[-6:-4])
+# 			if item_num > self.num_frames:
+# 				item_max_msd = np.max(self.dict_list_3rd_max_msd[item_name])
+# 				if item_max_msd > self.min_msd and item_group < 8+self.use_groups:
+# 					self.list_items.append(item_name)
+
+# 	def __len__(self):
+# 		return self.len
+
+# 	def get_label(self, index, ind_frame=None):
+# 		item_name = self.list_items[index]
+# 		return int(self.dict_label[item_name])
+
+# 	def get_data_cache(self):
+# 		return pickle.load(open(os.path.join(self.path_data, 'dict_data_'+self.source+'.pkl'), 'rb'))
+
+# 	def get_rgb_path(self, index, ind_frame):
+# 		item_name = self.list_items[index]
+# 		item_folder = os.path.join(self.path_data, item_name)
+# 		name_frame = '%s_%d.jpg' %(item_name, ind_frame+1)
+# 		return os.path.join(item_folder, name_frame)	
+
+# 	def get_of_path(self, index, ind_frame, direction):
+# 		item_name = self.list_items[index]
+# 		item_folder = os.path.join(self.path_data_flow, item_name + '_flow')
+# 		name_frame = '%s_%s_%d.png' %(item_name, direction, ind_frame+1)
+# 		return os.path.join(item_folder, name_frame)	
+
+# 	def get_norm(self, index, ind_frame):
+# 		item_name = self.list_items[index]
+# 		name_norm = '%s_%d' %(item_name, ind_frame+1)
+# 		return self.dict_norm[name_norm]
+
+# 	def get_num_rgb(self, index):
+# 		item_name = self.list_items[index]
+# 		return self.dict_num[item_name]
+
+# 	def get_mag(self, index):
+# 		item_name = self.list_items[index]
+# 		num = self.dict_num[item_name]
+# 		mag = []
+# 		for i in range(1, num):
+# 			key = '%s_%d' %(item_name, i)
+# 			mag.append(self.dict_mag[key])
+# 		return mag
+
 class UCF101_i(Base_Info_Video):
-	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF101/images'
+	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/images'
+	path_data_flow = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/flow'
 	path_infos = '/export/home/nsayed/data/UCF101'
-	def __init__(self, train=True, split=1, source='l', num_frames=12, min_msd=0):
+	def __init__(self, train=True, split=1, source='l', num_frames=12):
 		super(UCF101_i, self).__init__(train=train, source=source)
 		self.split = split
 		self.use_groups = 100
@@ -59,17 +158,12 @@ class UCF101_i(Base_Info_Video):
 			self.split = 1
 			self.use_groups = -split
 		self.num_frames = num_frames
-		self.min_msd = min_msd
-		self.dict_num = pickle.load(open(os.path.join(self.path_data, 
-			'dict_num_'+self.source+'.pkl'), 'rb'))
-		self.dict_mag = pickle.load(open(os.path.join(self.path_data, 
-			'dict_mag_'+ 'l' +'.pkl'), 'rb'))
-		self.dict_norm = pickle.load(open(os.path.join(self.path_data, 
-			'dict_norm_'+self.source+'.pkl'), 'rb'))
-		dict_names = pickle.load(open(os.path.join(self.path_data,
-			'dict_names_'+self.source+'_new.pkl'), 'rb'))
-		self.dict_list_3rd_max_msd = pickle.load(open(os.path.join(self.path_data, 
-			'dict_list_3rd_max_msd_'+ 'l' +'.pkl'), 'rb'))
+		self.dict_mag = pickle.load(open(os.path.join(self.path_data_flow, 
+			'dict_mag.pkl'), 'rb'))
+		self.dict_norm = pickle.load(open(os.path.join(self.path_data_flow, 
+			'dict_new.pkl'), 'rb'))
+		dict_names = pickle.load(open(os.path.join(self.path_data_flow,
+			'dict_names.pkl'), 'rb'))
 		self.dict_label = {}
 		for split in [1,2,3]:
 			info_name = 'trainlist0' + str(split) + '.txt'
@@ -101,11 +195,9 @@ class UCF101_i(Base_Info_Video):
 			drop_first = int((len(name) - 11) / 2) + 1
 			name = name[drop_first:]
 			item_name = dict_names[name + '.avi']
-			item_num = self.dict_num[item_name]
+			item_num = self.dict_norm[item_name].shape[0]
 			item_group = int(name[-6:-4])
-			if item_num > self.num_frames:
-				item_max_msd = np.max(self.dict_list_3rd_max_msd[item_name])
-				if item_max_msd > self.min_msd and item_group < 8+self.use_groups:
+			if item_num > self.num_frames and item_group < 8+self.use_groups:
 					self.list_items.append(item_name)
 
 	def __len__(self):
@@ -121,30 +213,26 @@ class UCF101_i(Base_Info_Video):
 	def get_rgb_path(self, index, ind_frame):
 		item_name = self.list_items[index]
 		item_folder = os.path.join(self.path_data, item_name)
-		name_frame = '%s_%d.jpg' %(item_name, ind_frame+1)
+		name_frame = 'frame%05d.jpg' %(ind_frame+1)
 		return os.path.join(item_folder, name_frame)	
 
-	def get_of_key(self, index, ind_frame, direction):
+	def get_of_path(self, index, ind_frame, direction):
 		item_name = self.list_items[index]
-		return '%s_%s_%d.jpg' %(item_name, direction, ind_frame+1)
+		item_folder = os.path.join(self.path_data_flow, direction, item_name)
+		name_frame = 'frame%05d.jpg' %(ind_frame+1)
+		return os.path.join(item_folder, name_frame)	
 
 	def get_norm(self, index, ind_frame):
 		item_name = self.list_items[index]
-		name_norm = '%s_%d' %(item_name, ind_frame+1)
-		return self.dict_norm[name_norm]
+		return self.dict_norm[item_name][ind_frame]
 
 	def get_num_rgb(self, index):
 		item_name = self.list_items[index]
-		return self.dict_num[item_name]
+		return self.dict_norm[item_name].shape[0]
 
 	def get_mag(self, index):
 		item_name = self.list_items[index]
-		num = self.dict_num[item_name]
-		mag = []
-		for i in range(1, num):
-			key = '%s_%d' %(item_name, i)
-			mag.append(self.dict_mag[key])
-		return mag
+		return self.dict_mag[item_name]
 
 class HMDB51_i(Base_Info_Video):
 	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/HMDB51/images'
@@ -210,10 +298,6 @@ class HMDB51_i(Base_Info_Video):
 		item_folder = os.path.join(self.path_data, item_name)
 		name_frame = '%s_%d.jpg' %(item_name, ind_frame+1)
 		return os.path.join(item_folder, name_frame)	
-
-	def get_of_key(self, index, ind_frame, direction):
-		item_name = self.list_items[index]
-		return '%s_%s_%d.jpg' %(item_name, direction, ind_frame+1)
 
 	def get_norm(self, index, ind_frame):
 		item_name = self.list_items[index]
@@ -289,10 +373,6 @@ class ACT_i(Base_Info_Video):
 		item_folder = os.path.join(self.path_data, item_name)
 		name_frame = '%s_%d.jpg' %(item_name, ind_frame+1)
 		return os.path.join(item_folder, name_frame)	
-
-	def get_of_key(self, index, ind_frame, direction):
-		item_name = self.list_items[index]
-		return '%s_%s_%d.jpg' %(item_name, direction, ind_frame+1)
 
 	def get_norm(self, index, ind_frame):
 		item_name = self.list_items[index]
@@ -383,10 +463,6 @@ class OlympicSports_i(Base_Info_Video):
 		item_folder = os.path.join(self.path_data, item_name + '_flow')
 		name_frame = '%s_%s_%d.png' %(item_name, direction, ind_frame+1)
 		return os.path.join(item_folder, name_frame)	
-
-	def get_of_key(self, index, ind_frame, direction):
-		item_name = self.list_items[index]
-		return '%s_%s_%d.jpg' %(item_name, direction, ind_frame+1)
 
 	def get_norm(self, index, ind_frame):
 		item_name = self.list_items[index]
