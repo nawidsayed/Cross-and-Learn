@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from experiment import utils
 from experiment import Base_experiment_pretraining
 from experiment.tracker import Tracker_classification, Tracker_similarity, Tracker_similarity_rec
-from compvis.models import Siamese, Siamese_fm
+from compvis.models import Concat, Cross_and_Learn
 from compvis.datasets import Dataset_def, Dataset_fm, Dataset_RGB, Dataset_OF
 
 from compvis import transforms_det as transforms 
@@ -52,7 +52,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 		self.list_infos += [('num_frames', num_frames), ('num_frames_cod', num_frames_cod),
 			('high_motion', high_motion), ('time_flip', time_flip), ('modalities', modalities)]
 
-		self.net = Siamese(norm=self.norm, num_frames=self.num_frames, dropout=self.dropout,
+		self.net = Concat(norm=self.norm, num_frames=self.num_frames, dropout=self.dropout,
 			modalities=self.modalities)
 		self.tracker = Tracker_classification()
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
@@ -224,7 +224,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			('lamb_norm', lamb_norm), ('leaky_relu', leaky_relu), ('eps', eps), 
 			('ada_weight_pos', ada_weight_pos), ('ada_weight_pos_intervall', ada_weight_pos_intervall),
 			('gradient_dot', gradient_dot)]
-		self.net = Siamese_fm(norm=self.norm, num_frames=self.num_frames,num_frames_cod=self.num_frames_cod,
+		self.net = Cross_and_Learn(norm=self.norm, num_frames=self.num_frames,num_frames_cod=self.num_frames_cod,
 			dropout=self.dropout, layer=self.layer, modalities=self.modalities, union=self.union, 
 			similarity_scheme=self.similarity_scheme, leaky_relu=leaky_relu, eps=self.eps)
 		self.tracker = Tracker_similarity()

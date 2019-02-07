@@ -1,2 +1,2 @@
 
-from .vgg_2 import *
+from .networks import *
