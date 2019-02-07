@@ -8,13 +8,13 @@ from experiment import Experiment_finetuning_ar_RGB, Experiment_finetuning_ar_OF
 # fm and def
 #####################################################
 
-e = Experiment_pretraining_fm('test_remove', batch_size=12, epochs=200, source='l', 
-	data_key='ucf', norm='caffe_bn_g2', max_shift=0, remove_motion=False, layer='fc6',
-	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], union=False, high_motion=1, 
-	split_channels=True, time_flip=True, use_rand=False, similarity_scheme='cosine',
-	learning_rate = 0.005, lamb_norm=0, lr_decay_scheme=1, eps=0.001, 
-	dropout=0.5)
-e.run()
+# e = Experiment_pretraining_fm('test_remove', batch_size=30, epochs=200, source='l', 
+# 	data_key='ucf', norm='caffe_bn', max_shift=0, remove_motion=False, layer='fc6',
+# 	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], union=False, high_motion=1, 
+# 	split_channels=True, time_flip=True, use_rand=False, similarity_scheme='cosine',
+# 	learning_rate = 0.005, lamb_norm=0, lr_decay_scheme=1, eps=0.001, 
+# 	dropout=0.5)
+# e.run()
 
 # e = Experiment_pretraining_def('caffe_bn_def_ucf_nonzeros', batch_size=30, epochs=200, source='l', 
 # 	data_key='ucf', norm='caffe_bn_g2', learning_rate=0.01, high_motion=1, split_channels=True,
@@ -42,11 +42,11 @@ e.run()
 # e.run()
 # e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_RGB('test_remove', name_finetuning ='ar_ucf_200_ft', 
-# 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
-# e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
+e = Experiment_finetuning_ar_RGB('test_remove', name_finetuning ='ar_ucf_200_ft', 
+	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
+	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+e.run()
+e.evaluate_net(num_test=25, final_test_runs=2)
 
 
 # e = Experiment_finetuning_ar_OF('test_remove', name_finetuning ='ar_ucf_200_flow', 
