@@ -1,9 +1,11 @@
 import torch.nn as nn
 import torch
+from torch.autograd import Variable
 
-# output_dim allows for finetuning on different datasets, default is UCF-101
+# Parameter output_dim allows for finetuning on different datasets, default is UCF-101
+# Input_spatial_size = (224, 224)
 class CaffeNet_BN(nn.Module):
-	# Input_spatial_size = (224, 224)
+
 	def __init__(self, output_dim = 101):
 		super(CaffeNet_BN, self).__init__()
 
@@ -56,4 +58,13 @@ class CaffeNet_BN(nn.Module):
 
 net = CaffeNet_BN()
 net.get_conv_weights()
+
+# Exemplary snippet
+t = torch.FloatTensor(10,3,224,224)
+t.normal_()
+input = Variable(t)
+output = net(input)
+
+
+
 
