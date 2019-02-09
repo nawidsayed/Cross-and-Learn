@@ -196,14 +196,12 @@ class Dataset_RGB(Base_Dataset):
 
 class Dataset_OF(Base_Dataset):
 	def __init__(self, infos, train=True, transform=None, num_test=5, num_frames=12, transform_rgb=None,
-		remove_motion=False, cutout_center=0, high_motion=False, time_flip=False):
+		high_motion=False, time_flip=False):
 		super(Dataset_OF, self).__init__(infos, train=train)
 		self.transform = transform
 		self.num_test = num_test
 		self.num_frames = num_frames
 		self.transform_rgb = transform_rgb
-		self.remove_motion = remove_motion
-		self.cutout_center = cutout_center
 		self.high_motion = high_motion
 		self.time_flip = time_flip
 
@@ -279,17 +277,6 @@ class Dataset_OF(Base_Dataset):
 		for i in range(num_samples):
 			for j in range(num_crops):
 				flow = torch.cat(images[j::num_crops][(2*self.num_frames)*i:(2*self.num_frames)*(i+1)], 0)
-				if self.remove_motion:
-					flow_nomot = flow.clone()
-					for k in range(self.num_frames):
-						flow_nomot_single = torch.sqrt(flow[2*k]**2 + flow[2*k+1]**2)
-						flow_nomot[2*k] = flow_nomot_single
-						flow_nomot[2*k+1] = flow_nomot_single
-					flow = flow_nomot
-				if self.cutout_center != 0:
-					center = int(self.num_frames)
-					space = self.cutout_center
-					flow[center-space:center+space] = 0
 				flows.append(flow)
 		flows = rand_timeflip(flows, rand_flip, 2)
 		num = len(flows)
@@ -312,13 +299,12 @@ class Dataset_OF(Base_Dataset):
 		return self.preprocess(self[index])[0][0]
 
 class Dataset_COD(Base_Dataset):
-	def __init__(self, infos, train=True, transform=None, num_test=5, num_frames=12, cutout_center=0,
+	def __init__(self, infos, train=True, transform=None, num_test=5, num_frames=12,
 		nodiff=False, time_flip=False):	
 		super(Dataset_COD, self).__init__(infos, train=train)
 		self.transform = transform
 		self.num_test = num_test
 		self.num_frames = num_frames
-		self.cutout_center = cutout_center
 		self.nodiff = nodiff
 		self.time_flip = time_flip
 
@@ -381,10 +367,6 @@ class Dataset_COD(Base_Dataset):
 					cod[3*k:3*(k+1)] = coi[3*(k+1):3*(k+2)] - coi[3*k:3*(k+1)]
 					if self.nodiff:
 						cod[3*k:3*(k+1)] = coi[3*k:3*(k+1)]
-				if self.cutout_center != 0:
-					center = int(self.num_frames / 2) * 3
-					space = int(self.cutout_center / 2) * 3
-					cod[center-space:center+space] = 0
 				cods.append(cod)
 		cods = rand_timeflip(cods, rand_flip, 3)
 		num = len(cods)
@@ -396,11 +378,11 @@ class Dataset_COD(Base_Dataset):
 
 class Dataset_def(Base_Dataset):
 	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, num_frames=12, 
-		remove_motion=False, cutout_center=0, high_motion=False, time_flip=False):
+		high_motion=False, time_flip=False):
 		super(Dataset_def, self).__init__(infos, train=train)
 		self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
 		self.data_of = Dataset_OF(infos, train=train, transform=transform_of, num_frames=num_frames,
-			remove_motion=remove_motion, cutout_center=cutout_center, time_flip=False)
+			time_flip=False)
 		self.num_frames = num_frames
 		self.high_motion = high_motion
 		self.time_flip = time_flip
@@ -465,12 +447,11 @@ class Dataset_def(Base_Dataset):
 
 class Dataset_fm(Base_Dataset):
 	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, transform_cod=None,
-		num_frames=12, num_frames_cod=4, max_shift=0, remove_motion=False, cutout_center=0,
+		num_frames=12, num_frames_cod=4,
 		modalities = ['rgb', 'of'], high_motion=False, time_flip=False):
 		super(Dataset_fm, self).__init__(infos, train=train)
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
-		self.max_shift = max_shift
 		self.modalities = modalities
 		self.high_motion = high_motion
 		self.time_flip = time_flip
@@ -480,10 +461,10 @@ class Dataset_fm(Base_Dataset):
 			self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
 		if 'of' in modalities:
 			self.data_of = Dataset_OF(infos, train=train, transform=transform_of, num_frames=num_frames, 
-				remove_motion=remove_motion, cutout_center=cutout_center, time_flip=False)
+				time_flip=False)
 		if 'cod' in modalities:
 			self.data_cod = Dataset_COD(infos, train=train, transform=transform_cod, 
-				num_frames=num_frames_cod, cutout_center=cutout_center, time_flip=False)
+				num_frames=num_frames_cod, time_flip=False)
 
 	def __getitem__(self, index_big_positive):
 		index_big_positive = self._prep_index(index_big_positive)
@@ -497,8 +478,7 @@ class Dataset_fm(Base_Dataset):
 			ind_frame_first = sample_high_motion(list_mag, self.num_frames, mode=self.high_motion)
 			ind_frame_center = ind_frame_first + int(self.num_frames/2)
 			if 'rgb' in self.modalities:
-				ind_frame_image = random.randint(np.max([0, ind_frame_center-self.max_shift]), 
-					np.min([ind_frame_center+self.max_shift+1, num_rgb]))
+				ind_frame_image = ind_frame_center
 				image, _ = self.data_rgb[index_big, ind_frame_image]
 				raw.append(image)
 				if 'rgb2' in self.modalities:
@@ -695,42 +675,3 @@ if __name__ == '__main__':
 		list_mag = np.random.uniform(0,10, size=5)
 		ind = sample_high_motion(list_mag, 3)
 		print(ind)
-
-
-	# def __getitem__(self, index_big):
-	# 	info, index = self.get_info_index(index_big)
-	# 	num_rgb = info.get_num_rgb(index)
-	# 	random = np.random.RandomState()
-	# 	ind_frames_first = np.array([random.randint(0, num_rgb-self.num_frames)]).astype(np.int32)
-	# 	sample = []
-	# 	if self.modalities != 3:
-	# 		ind_frames_first_image = []
-	# 		for iff in ind_frames_first:
-	# 			iff += int(self.num_frames / 2)
-	# 			iffi = random.randint(np.max([0, iff-self.max_shift]), np.min([iff+self.max_shift+1,num_rgb]))
-	# 			ind_frames_first_image.append(iffi)
-	# 		ind_frames_first_image = np.array(ind_frames_first_image).astype(np.int32)
-	# 		image, _ = self.data_rgb[index_big, ind_frames_first_image]
-	# 		sample.append(image)
-	# 	if self.modalities != 1:
-	# 		cod, _ = self.data_cod[index_big, ind_frames_first]
-	# 		if self.modalities == 3:
-	# 			sample.append(cod)
-	# 		else:
-	# 			if not self.hard:
-	# 				index_big = random.randint(0, len(self))
-	# 				info, index = self.get_info_index(index_big)
-	# 				num_rgb = info.get_num_rgb(index)
-	# 			ind_frames_first = np.array([random.randint(0, num_rgb-self.num_frames)]).astype(np.int32)
-	# 			cod_negative, _ = self.data_cod[index_big, ind_frames_first]
-	# 			sample.append(cod, cod_negative)
-	# 	if self.modalities != 2:	
-	# 		flow, _ = self.data_of[index_big, ind_frames_first]
-	# 		if not self.hard:
-	# 			index_big = random.randint(0, len(self))
-	# 			info, index = self.get_info_index(index_big)
-	# 			num_rgb = info.get_num_rgb(index)
-	# 		ind_frames_first = np.array([random.randint(0, num_rgb-self.num_frames)]).astype(np.int32)
-	# 		flow_negative, _ = self.data_of[index_big, ind_frames_first]
-	# 		sample.append(flow, flow_negative)
-	# 	return sample[0], sample[1], sample[2]

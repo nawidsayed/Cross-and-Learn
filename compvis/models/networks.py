@@ -524,7 +524,7 @@ class Concat(Base_TwoStream):
 
 class Cross_and_Learn(Base_TwoStream):
     def __init__(self, norm='BN', layer='fc6', num_frames=12, num_frames_cod=4, dropout=0.5,
-        modalities=['rgb', 'of'], union=False, decoder=False, similarity_scheme='cosine', 
+        modalities=['rgb', 'of'], decoder=False, similarity_scheme='cosine', 
         leaky_relu=False, eps=0.001, ):
         super(Cross_and_Learn, self).__init__(norm=norm, num_frames=num_frames, 
             num_frames_cod=num_frames_cod, dropout=dropout, modalities=modalities,
@@ -532,7 +532,6 @@ class Cross_and_Learn(Base_TwoStream):
         if leaky_relu and layer != 'fc6':
             raise Exception('leaky relu currently only at fc6 implemented')
         self.layer = layer
-        self.union = union
         self.similarity_scheme = similarity_scheme
         self.eps = eps
         self._set_similarity_func()

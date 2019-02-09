@@ -260,13 +260,12 @@ class RandomCrop(object):
     or an integer, in which case the target will be of a square shape (size, size)
     """
 
-    def __init__(self, size, padding=0, max_shift=0):
+    def __init__(self, size, padding=0):
         if isinstance(size, numbers.Number):
             self.size = (int(size), int(size))
         else:
             self.size = size
         self.padding = padding
-        self.max_shift = max_shift
 
     def __call__(self, img, random=None):
         if random == None:
@@ -281,9 +280,6 @@ class RandomCrop(object):
 
         x1 = random.randint(0, w - tw)
         y1 = random.randint(0, h - th)
-
-        x1 = np.random.randint(np.max([0, x1-self.max_shift]), np.min([w-tw, x1+1+self.max_shift]))
-        y1 = np.random.randint(np.max([0, y1-self.max_shift]), np.min([h-th, y1+1+self.max_shift]))
         return img.crop((x1, y1, x1 + tw, y1 + th)), x1, y1
 
 

@@ -37,7 +37,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 			split_channels = False,
 			dropout = 0.5,
 			use_rand = True,
-			high_motion = False,
+			high_motion = 1,
 			time_flip = False
 		):
 		super(Experiment_pretraining_def, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
@@ -169,25 +169,15 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			dropout = 0.5,
 			use_rand = True,
 			layer = 'fc6',
-			max_shift = 0,
-			kernel_size = 0,
-			remove_motion = False,
-			cutout_center = 0, 
-			curriculum = 0,
-			modalities = ['rgb', 'of'],
-			union = False, 
+			modalities = ['rgb', 'of'], 
 			high_motion = False,
 			time_flip = False,
 			similarity_scheme = 'cosine',
-			negatives_same_domain = False,
 			no_positive = False,
 			split = 1,
-			lamb_norm = 1,
 			weight_pos = 0.5,
 			leaky_relu = False,
 			eps = 0.001,
-			ada_weight_pos = False,
-			ada_weight_pos_intervall = 2,
 			gradient_dot = 'balanced'
 		):
 		super(Experiment_pretraining_fm, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
@@ -197,35 +187,24 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
 		self.layer = layer
-		self.max_shift = max_shift
-		self.kernel_size = kernel_size
-		self.remove_motion = remove_motion
-		self.cutout_center = cutout_center
-		self.curriculum = curriculum
 		self.modalities = modalities
-		self.union = union
 		self.high_motion = high_motion
 		self.time_flip = time_flip
 		self.similarity_scheme = similarity_scheme
 		self.split = split
-		self.lamb_norm = lamb_norm
 		self.weight_pos = weight_pos
 		self.leaky_relu = leaky_relu
 		self.eps = eps
-		self.ada_weight_pos = ada_weight_pos
-		self.ada_weight_pos_intervall = ada_weight_pos_intervall
 		self.gradient_dot = gradient_dot
 		self.list_infos += [('num_frames', num_frames), ('num_frames_cod', num_frames_cod), 
-			('layer', layer), ('max_shift', max_shift), ('kernel_size', kernel_size), 
-			('remove_motion', remove_motion), ('cutout_center', cutout_center), ('curriculum', curriculum), 
-			('modalities', modalities), ('union', union), ('high_motion', high_motion), 
+			('layer', layer),  
+			('modalities', modalities), ('high_motion', high_motion), 
 			('time_flip', time_flip),('similarity_scheme', similarity_scheme),
 			('split', split), ('weight_pos', weight_pos),
-			('lamb_norm', lamb_norm), ('leaky_relu', leaky_relu), ('eps', eps), 
-			('ada_weight_pos', ada_weight_pos), ('ada_weight_pos_intervall', ada_weight_pos_intervall),
+			('leaky_relu', leaky_relu), ('eps', eps), 
 			('gradient_dot', gradient_dot)]
 		self.net = Cross_and_Learn(norm=self.norm, num_frames=self.num_frames,num_frames_cod=self.num_frames_cod,
-			dropout=self.dropout, layer=self.layer, modalities=self.modalities, union=self.union, 
+			dropout=self.dropout, layer=self.layer, modalities=self.modalities, 
 			similarity_scheme=self.similarity_scheme, leaky_relu=leaky_relu, eps=self.eps)
 		self.tracker = Tracker_similarity()
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
@@ -266,19 +245,14 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		norms = output[-1]
 		output = output[:-1]
 		loss_norm = 0
-		if self.lamb_norm != 0:
-			for norm in norms:
-				labels_one = Variable(torch.FloatTensor(norm.size()).zero_().cuda() + 30)
-				loss_norm += self.criterion_norm(norm, labels_one)
 		half = int(len(output) / 2)
 		sim_true = 0
 		sim_false = 0
 		for i in range(half):
 			sim_true += self._distance_transformation(output[i], True)
 			sim_false += self._distance_transformation(output[half + i], False)
-		self._update_ada_weight_pos(output)
 		loss_sim = 2*torch.mean(sim_false*(1-self.weight_pos) - sim_true*self.weight_pos, dim=0) / half
-		return loss_sim + self.lamb_norm * loss_norm
+		return loss_sim
 
 	def _distance_transformation(self, sim, close):
 		if self.gradient_dot == 'balanced':
@@ -299,39 +273,6 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 				return sim ** 2
 			else:
 				return 1-(1-sim)** 2
-
-	def _reset_ada_weight_pos(self):
-		self.sim_true = 0
-		self.sim_false = 0
-		self.ada_weight_pos_counter = 0
-
-	def _update_ada_weight_pos(self, output):
-		half = int(len(output) / 2)
-		sim_true = 0
-		sim_false = 0
-		for i in range(half):
-			sim_true += output[i].data
-			sim_false += output[half + i].data
-		sim_true /= half
-		sim_false /= half
-		if not hasattr(self, 'sim_true'):
-			self._reset_ada_weight_pos()
-		if self.is_training:
-			self.sim_true += torch.mean(sim_true)
-			self.sim_false += torch.mean(sim_false)
-			self.ada_weight_pos_counter += 1
-
-	def _result_ada_weight_pos(self):
-		if hasattr(self, 'ada_weight_pos_counter') and self.ada_weight_pos_counter != 0:
-			if self.epoch % self.ada_weight_pos_intervall == 0:
-				self.sim_true /= self.ada_weight_pos_counter
-				self.sim_false /= self.ada_weight_pos_counter
-				diff = self.sim_true - self.sim_false
-				if self.ada_weight_pos:
-					self.weight_pos = (2+diff) / 4
-					print('set weight_pos to: ', self.weight_pos)
-				self._reset_ada_weight_pos()
-
 
 	def _gen_feature_mat(self, mode):
 		raise Exception('deprecated')
@@ -382,16 +323,15 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		rgb = self.rgb
 		transform_rgb = transforms.Compose([
 			transforms.Scale(256), 
-			transforms.RandomCrop(self.net.input_spatial_size, max_shift=5*self.max_shift),
+			transforms.RandomCrop(self.net.input_spatial_size),
 			transforms.RandomHorizontalFlip(), 
 			self.transform_color,
 			transforms.ToTensor(),
 			transforms.Normalize(self.mean, self.std)])
 		transform_of = transforms.Compose([
 			transforms.Scale(256), 
-			transforms.RandomCrop(self.net.input_spatial_size, max_shift=5*self.max_shift),
+			transforms.RandomCrop(self.net.input_spatial_size),
 			transforms.RandomHorizontalFlip(), 
-			transforms.Smoothen(self.kernel_size),
 			transforms.ToTensor(), 
 			transforms.SubMeanDisplacement()])
 		transform_cod = transforms.Compose([
@@ -406,8 +346,8 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform_rgb=transform_rgb,
 		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
-		  num_frames_cod=self.num_frames_cod, max_shift=self.max_shift, remove_motion=self.remove_motion, 
-		  cutout_center=self.cutout_center, modalities=self.modalities, high_motion=self.high_motion,
+		  num_frames_cod=self.num_frames_cod, 
+		  modalities=self.modalities, high_motion=self.high_motion,
 		  time_flip=self.time_flip)
 		self._reconfigure_dataloader(dataset, self.batch_size, shuffle=True)
 
@@ -420,7 +360,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		transform_of = transforms.Compose([
 			transforms.Scale(256), 
 			transforms.CenterCrop(self.net.input_spatial_size),
-			transforms.Smoothen(self.kernel_size),
+
 			transforms.ToTensor(), 
 			transforms.SubMeanDisplacement()])
 		transform_cod = transforms.Compose([
@@ -434,8 +374,8 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform_rgb=transform_rgb,
 		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
-		  num_frames_cod=self.num_frames_cod, remove_motion=self.remove_motion, 
-		  cutout_center=self.cutout_center, modalities=self.modalities)
+		  num_frames_cod=self.num_frames_cod,
+		  modalities=self.modalities)
 		self._reconfigure_dataloader(dataset, self.batch_size_test, shuffle=True)
 
 	def _reconfigure_dataloader_fm(self, mode):
@@ -456,12 +396,10 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			transform_of = transforms.Compose([
 				transforms.Scale(256), 
 				transforms.TenCrop(self.net.input_spatial_size),
-				transforms.Smoothen(self.kernel_size),
 				transforms.ToTensor(), 
 				transforms.SubMeanDisplacement()])
 			dataset = Dataset_OF(infos=dataset_infos, train=False, transform=transform_of, num_test=5,
-				num_frames=self.num_frames, num_frames_cod=self.num_frames_cod, 
-				remove_motion=self.remove_motion, cutout_center=self.cutout_center)
+				num_frames=self.num_frames, num_frames_cod=self.num_frames_cod)
 		self._reconfigure_dataloader(dataset, 1, shuffle=True)	
 
 	def _get_subnet(self, mode):
@@ -470,20 +408,8 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		elif mode == 'OF':
 			return self.net.mot_net
 
-	def _set_layer_curriculum(self):
-		scheme_0 = []
-		scheme_1 = [(0/15, 'conv5'), (1/15, 'pool5'), (2/15, 'fc6'), (7/15, 'fc7')]
-		schemes = [scheme_0, scheme_1]
-		for frac, layer in schemes[self.curriculum]:
-			if self.epoch == int(self.epochs * frac):
-				self.net.set_layer(layer)
-				print('Set layer to %s' %layer)
-
 	def _apply_per_epoch(self):
 		super(Experiment_pretraining_fm, self)._apply_per_epoch()
-		self._set_layer_curriculum()
-		self._result_ada_weight_pos()
-
 
 	def _reconfigure_tracker_train(self):
 		if len(self.modalities) == 2:
