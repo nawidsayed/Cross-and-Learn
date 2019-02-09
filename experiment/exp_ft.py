@@ -26,7 +26,6 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
 			data_key = 'ucf',
-			source = 'l',
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
@@ -40,7 +39,7 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 		):
 		super(Experiment_finetuning_ar_RGB, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			data_key=data_key, source=source, dropout=dropout, name_finetuning=name_finetuning, 
+			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			name_experiment=name_experiment, reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt,
 			freeze_layer=freeze_layer, split=split, reset_fc6=reset_fc6)
 
@@ -96,11 +95,10 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 			transforms.Normalize(self.mean, self.std)])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=1,
+			dataset_info = dataset_info_type(train=True, num_frames=1,
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform=transform)
-		print(len(dataset))
 		self._reconfigure_dataloader(dataset, self.batch_size, shuffle=True)
 
 	def _reconfigure_dataloader_test(self):
@@ -111,7 +109,7 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 			transforms.Normalize(self.mean, self.std)])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=1,
+			dataset_info = dataset_info_type(train=False, num_frames=1,
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform=transform, 
@@ -145,7 +143,6 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
 			data_key = 'ucf',
-			source = 'l',
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
@@ -159,7 +156,7 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 		):
 		super(Experiment_finetuning_ar_OF, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			data_key=data_key, source=source, dropout=dropout, name_finetuning=name_finetuning, 
+			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt, freeze_layer=freeze_layer, split=split, 
 			reset_fc6=reset_fc6)
 
@@ -199,7 +196,7 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 			transforms.SubMeanDisplacement()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames, 
+			dataset_info = dataset_info_type(train=True, num_frames=self.num_frames, 
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform=transform,
@@ -214,7 +211,7 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 			transforms.SubMeanDisplacement()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames, 
+			dataset_info = dataset_info_type(train=False, num_frames=self.num_frames, 
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform=transform, 
@@ -246,7 +243,6 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
 			data_key = 'ucf',
-			source = 'l',
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
@@ -260,7 +256,7 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 		):
 		super(Experiment_finetuning_ar_COD, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			data_key=data_key, source=source, dropout=dropout, name_finetuning=name_finetuning, 
+			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt, freeze_layer=freeze_layer, split=split,
 			reset_fc6=reset_fc6)
 
@@ -297,7 +293,7 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames, 
+			dataset_info = dataset_info_type(train=True, num_frames=self.num_frames, 
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform=transform,
@@ -311,7 +307,7 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames, 
+			dataset_info = dataset_info_type(train=False, num_frames=self.num_frames, 
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform=transform, 
@@ -334,6 +330,6 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 
 
 if __name__ == "__main__":
-	e = Experiment_finetuning_ar_RGB('test_ft', batch_size=20, source='l', 
+	e = Experiment_finetuning_ar_RGB('test_ft', batch_size=20,  
 		load_epoch_pt=400, name_finetuning='test_def')
 	e.run()

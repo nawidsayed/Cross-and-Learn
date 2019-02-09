@@ -296,8 +296,7 @@ class RandomHorizontalFlip(object):
         return img, r
 
 class SplitChannels(object):
-    def __init__(self, use_rand=True, train=True):
-        self.use_rand = use_rand  
+    def __init__(self, train=True):  
         self.train = train
 
     def __call__(self, img, random=None):
@@ -307,8 +306,7 @@ class SplitChannels(object):
         if img.shape[2] == 3:
             if self.train:
                 rand = random.randint(0, 3)
-                if not self.use_rand:
-                    rand = np.random.randint(0, 3) 
+                rand = np.random.randint(0, 3) 
                 for channel in range(3):
                     img[:,:,channel] = img[:,:,rand]
             else:
@@ -331,12 +329,11 @@ class RandomColorJitter(object):
         hue(float): How much to jitter hue. hue_factor is chosen uniformly from
             [-hue, hue]. Should be >=0 and <= 0.5.
     """
-    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0, use_rand=True):
+    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
         self.brightness = brightness
         self.contrast = contrast
         self.saturation = saturation
         self.hue = hue
-        self.use_rand = use_rand
 
     @staticmethod
     def get_params(brightness, contrast, saturation, hue, random):
@@ -381,10 +378,9 @@ class RandomColorJitter(object):
         if img.mode == 'RGB':    
             transform = self.get_params(self.brightness, self.contrast,
                                         self.saturation, self.hue, random)
-            if not self.use_rand:
-                random2 = np.random.RandomState()
-                transform = self.get_params(self.brightness, self.contrast,
-                                            self.saturation, self.hue, random2)
+            random2 = np.random.RandomState()
+            transform = self.get_params(self.brightness, self.contrast,
+                                        self.saturation, self.hue, random2)
             return transform(img)
         return img
 

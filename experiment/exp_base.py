@@ -11,7 +11,7 @@ from experiment import utils
 import compvis.data as data
 from compvis import transforms_det as transforms
 
-from compvis.datasets import UCF101_i, HMDB51_i, ACT_i, Leeds_i, OlympicSports_i
+from compvis.datasets import UCF101_i #, HMDB51_i, ACT_i, Leeds_i, OlympicSports_i
 from compvis.models import get_network, Net_ar
 
 
@@ -63,22 +63,20 @@ class Base(object):
 	max_digits = 4
 	mean = [0.485, 0.456, 0.406] 
 	std = [0.229, 0.224, 0.225]
-	dict_dataset_info_types = {'ucf':[UCF101_i], 'hmdb':[HMDB51_i], 'act':[ACT_i], 
-		'all':[UCF101_i, HMDB51_i, ACT_i], 'leeds':[Leeds_i], 'olympic':[OlympicSports_i],
-		'all_olympic':[UCF101_i, HMDB51_i, ACT_i, OlympicSports_i]}
+	dict_dataset_info_types = {'ucf':[UCF101_i]} #, 'hmdb':[HMDB51_i], 'act':[ACT_i], 
+		# 'all':[UCF101_i, HMDB51_i, ACT_i], 'leeds':[Leeds_i], 'olympic':[OlympicSports_i],
+		# 'all_olympic':[UCF101_i, HMDB51_i, ACT_i, OlympicSports_i]}
 	def __init__(self,
 			name,
 			data_key='ucf',
-			source = 'l'
 		):
 		self.name = name
 		self.data_key = data_key
-		self.source = source
 
 		self.results_dir = os.path.join(self.results_path, self.name)
 		utils.mkdir(self.results_dir)
 
-		self.list_infos = [('name', self.name), ('data_key', data_key), ('source', source)]
+		self.list_infos = [('name', self.name), ('data_key', data_key)]
 		self.dataset_info_types = self.dict_dataset_info_types[data_key] 
 
 	def _reconfigure_dataloader(self, dataset, batch_size, shuffle):
@@ -126,9 +124,8 @@ class Base_experiment(Base):
 			lr_decay_scheme=0,
 			weight_decay=0.0005,
 			data_key='ucf',
-			source = 'l'
 		):
-		super(Base_experiment, self).__init__(name=name, data_key=data_key, source=source)
+		super(Base_experiment, self).__init__(name=name, data_key=data_key)
 		self.batch_size = batch_size
 		self.epochs = epochs
 		self.learning_rate = learning_rate
@@ -433,37 +430,30 @@ class Base_experiment_pretraining(Base_experiment):
 			lr_decay_scheme = 0,
 			weight_decay = 0.0005,
 			data_key = 'all',
-			source = 'l',
 			norm = 'BN',
-			rgb = 0.3,
 			split_channels = False,
 			dropout = 0.5,
-			use_rand = True
 		):
 		super(Base_experiment_pretraining, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			data_key=data_key, source=source)
+			data_key=data_key)
 
 		self.results_dir = os.path.join(self.results_dir, 'experiment')
 		if not utils.mkdir(self.results_dir):
 			print('Existing experiment for given name')
 
 		self.norm = norm
-		self.rgb = rgb
 		self.split_channels = split_channels
 		self.dropout = dropout
-		self.use_rand = use_rand
-		self.list_infos += [('norm', norm), ('rgb', rgb), ('split_channels', split_channels), 
-			('dropout', dropout), ('use_rand', use_rand)]
+		self.list_infos += [('norm', norm), ('split_channels', split_channels), 
+			('dropout', dropout)]
 		self.save_intervall = 50
 		self.test_intervall = 10
 		self.batch_size_test = int(batch_size / 2)
 		if self.split_channels:
-			self.transform_color = transforms.SplitChannels(use_rand=self.use_rand)
+			self.transform_color = transforms.SplitChannels()
 		else:
 			self.transform_color = transforms.Smoothen(kernel_size=0)
-			# self.transform_color = transforms.RandomColorJitter(brightness=self.rgb, contrast=self.rgb, 
-			# 	saturation=self.rgb, hue=self.rgb, use_rand=self.use_rand)
 	
 	def _set_dataloader(self, dataset):
 		self.dataloader = data.DataLoader(dataset, batch_size=self.batch_size, num_workers=20, 
@@ -485,7 +475,6 @@ class Base_experiment_finetuning(Base_experiment):
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
 			data_key = 'ucf',
-			source = 'l',
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
@@ -497,7 +486,7 @@ class Base_experiment_finetuning(Base_experiment):
 		):
 		super(Base_experiment_finetuning, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			data_key=data_key, source=source)
+			data_key=data_key)
 		
 		self.results_dir = os.path.join(self.results_dir, name_finetuning)
 		if not utils.mkdir(self.results_dir):

@@ -9,7 +9,7 @@ from io import BytesIO
 import compvis.data as data
 
 __all__ = ['Dataset_Image', 'Dataset_RGB', 'Dataset_OF', 'Dataset_COD', 
-'Dataset_def', 'Dataset_fm', 'Dataset_sl']
+'Dataset_def', 'Dataset_fm']
 
 # Resizes image to at least (320, 240) and then crops for that size
 def prep_image(path):
@@ -69,8 +69,6 @@ class Base_Dataset(data.Dataset):
 	data_cache = None
 	def __init__(self, infos, train=True):
 		self.infos = infos
-		for i, info in enumerate(self.infos):
-			info.num_info = i
 		self.train = train
 		self.len = 0
 		for info in self.infos:
@@ -167,8 +165,7 @@ class Dataset_RGB(Base_Dataset):
 		path_frames = []
 		for ind_frame in ind_frames:
 			path_frames.append(info.get_rgb_path(index, ind_frame))
-		label_offset = info.num_info * 100000
-		return path_frames, info.get_label(index) + label_offset
+		return path_frames, info.get_label(index)
 
 	def preprocess(self, raw):
 		raw = list(raw)
@@ -195,13 +192,12 @@ class Dataset_RGB(Base_Dataset):
 		return self.preprocess(self[index])[0][0]
 
 class Dataset_OF(Base_Dataset):
-	def __init__(self, infos, train=True, transform=None, num_test=5, num_frames=12, transform_rgb=None,
-		high_motion=False, time_flip=False):
+	def __init__(self, infos, train=True, transform=None, num_test=5, num_frames=12,
+		high_motion=1, time_flip=False):
 		super(Dataset_OF, self).__init__(infos, train=train)
 		self.transform = transform
 		self.num_test = num_test
 		self.num_frames = num_frames
-		self.transform_rgb = transform_rgb
 		self.high_motion = high_motion
 		self.time_flip = time_flip
 
@@ -231,8 +227,6 @@ class Dataset_OF(Base_Dataset):
 		path_flows_norms = []
 		path_frames = []
 		for ind_frame_first in ind_frames_first:
-			if self.transform_rgb is not None:
-				path_frames.append(info.get_rgb_path(index, ind_frame_first))
 			for i in range(self.num_frames):
 				for direction in ['x', 'y']:
 					ind_frame = ind_frame_first + i
@@ -246,15 +240,11 @@ class Dataset_OF(Base_Dataset):
 
 	def preprocess(self, raw):
 		raw = list(raw)
-		if self.transform_rgb is None:
-			if len(raw) == 2:
-				path_flows_norms, label = raw
-				random = np.random.RandomState()
-			else:
-				path_flows_norms, label, random = raw
-		else:
-			path_frames, buffers_norms, label = raw
+		if len(raw) == 2:
+			path_flows_norms, label = raw
 			random = np.random.RandomState()
+		else:
+			path_flows_norms, label, random = raw
 		randomstate = random.get_state() 
 		rand_flip = 0
 		if self.time_flip and self.train:
@@ -281,19 +271,7 @@ class Dataset_OF(Base_Dataset):
 		flows = rand_timeflip(flows, rand_flip, 2)
 		num = len(flows)
 		label = num * [label]
-		if self.transform_rgb is None:
-			return flows, label		
-		else:
-			images = []
-			for path_frame in path_frames:
-				img = prep_image(path_frame)
-				random.set_state(randomstate)
-				img = self.transform_rgb(img, random)
-				if isinstance(img, list): 
-					images += img
-				else:
-					images.append(img)
-			return flows, label, images
+		return flows, label		
 
 	def get_sample(self, index):
 		return self.preprocess(self[index])[0][0]
@@ -378,7 +356,7 @@ class Dataset_COD(Base_Dataset):
 
 class Dataset_def(Base_Dataset):
 	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, num_frames=12, 
-		high_motion=False, time_flip=False):
+		high_motion=1, time_flip=False):
 		super(Dataset_def, self).__init__(infos, train=train)
 		self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
 		self.data_of = Dataset_OF(infos, train=train, transform=transform_of, num_frames=num_frames,
@@ -448,7 +426,7 @@ class Dataset_def(Base_Dataset):
 class Dataset_fm(Base_Dataset):
 	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, transform_cod=None,
 		num_frames=12, num_frames_cod=4,
-		modalities = ['rgb', 'of'], high_motion=False, time_flip=False):
+		modalities = ['rgb', 'of'], high_motion=1, time_flip=False):
 		super(Dataset_fm, self).__init__(infos, train=train)
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
@@ -481,8 +459,6 @@ class Dataset_fm(Base_Dataset):
 				ind_frame_image = ind_frame_center
 				image, _ = self.data_rgb[index_big, ind_frame_image]
 				raw.append(image)
-				if 'rgb2' in self.modalities:
-					raw.append(image)
 			if 'of' in self.modalities:
 				ind_frame_first = ind_frame_center - int(self.num_frames/2)
 				flow, _ = self.data_of[index_big, ind_frame_first]
@@ -556,86 +532,6 @@ class Dataset_fm(Base_Dataset):
 		if 'cod' in self.modalities:
 			data_cache = data_caches.pop(0)
 			self.data_cod.data_cache = data_cache	
-
-class Dataset_sl(Base_Dataset):
-	def __init__(self, infos, train=True, transform_rgb=None, num_frames=20, min_spacing=3,
-		high_motion=False, time_flip=False, same_video=True, max_spacing=10, min_msd=0):
-		super(Dataset_sl, self).__init__(infos, train=train)
-		self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
-		self.num_frames = num_frames
-		self.min_spacing = min_spacing
-		self.high_motion = high_motion
-		self.time_flip = time_flip
-		self.same_video = same_video
-		self.max_spacing = max_spacing
-		self.min_msd = min_msd
-
-	def __getitem__(self, index_big):
-		index_big = self._prep_index(index_big)
-		info, index = self.get_info_index(index_big)
-		num_rgb = info.get_num_rgb(index)
-		random = np.random.RandomState()
-		list_mag = info.get_mag(index)
-		ind_frame_first = sample_high_motion(list_mag, 2, mode=self.high_motion)
-		ind_frame_first += 1
-		msd = info.get_msd(index, ind_frame_first)
-		indices_frame = self.sample_indices(ind_frame_first, num_rgb, msd)
-		# indices_frame = sample_indices(self.num_frames, self.min_spacing) + ind_frame_first
-		indices_big = [index_big] * 5
-		# if not self.same_video:
-		# 	index_big_neg = random.randint(0, len(self))
-		# 	info, index = self.get_info_index(index_big_neg)
-		# 	num_rgb = info.get_num_rgb(index)
-		# 	ind_frame_first = random.randint(0, num_rgb-self.num_frames)
-		# 	indices_frame_neg = sample_indices(self.num_frames, self.min_spacing) + ind_frame_first
-		# 	indices_frame[0] = indices_frame_neg[0]
-		# 	indices_frame[4] = indices_frame_neg[4]
-		# 	indices_big[0] = index_big_neg
-		# 	indices_big[4] = index_big_neg
-		images = []
-		for i in range(5):
-			index_big, ind_frame = indices_big[i], indices_frame[i]
-			image, _ = self.data_rgb[index_big, ind_frame]
-			images.append(image)
-		return images
-
-	def sample_indices(self, ind_frame, num_rgb, msd):
-		lower = np.random.randint(np.max([0, ind_frame-self.max_spacing]), ind_frame)
-		upper = np.random.randint(ind_frame+1, np.min([num_rgb, ind_frame+self.max_spacing+1]))
-		msd[lower:upper+1] = 0
-		indices_sorted = np.argsort(msd)
-		start = -3
-		while msd[indices_sorted[start-1]] > self.min_msd:
-			start -= 1
-		possible_indices = indices_sorted[start:]
-		np.random.shuffle(possible_indices)
-		indices = np.array([possible_indices[0], lower, ind_frame, upper, 
-			possible_indices[1]])
-		return indices
-
-	def preprocess(self, raw):
-		raw = list(raw)
-		random = np.random.RandomState()
-		randomstate = random.get_state() 
-		rand_flip = 0
-		if self.time_flip and self.train:
-			rand_flip = np.random.rand()
-		if rand_flip > 0.5:
-			raw.reverse()
-		images = []
-		for image in raw:
-			random.set_state(randomstate)
-			image, _ = self.data_rgb.preprocess((image, None, random))
-			images.append(image)
-		return images
-
-	@property
-	def data_cache(self):
-		return [self.data_rgb.data_cache]
-
-	@data_cache.setter
-	def data_cache(self, cache):
-		self.data_rgb.data_cache = cache[0]	
 
 if __name__ == '__main__':
 	from compvis.datasets import OlympicSports_i, UCF101_i, HMDB51_i, ACT_i

@@ -29,21 +29,18 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 			weight_decay = 0.0005,
 			norm = 'BN',
 			data_key = 'all',
-			modalities = ['rgb', 'cod'],
-			source = 'l',
+			modalities = ['rgb', 'of'],
 			num_frames = 10,
 			num_frames_cod = 4,
-			rgb = 0.3,
 			split_channels = False,
 			dropout = 0.5,
-			use_rand = True,
 			high_motion = 1,
-			time_flip = False
+			time_flip = True
 		):
 		super(Experiment_pretraining_def, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			norm=norm, data_key=data_key, source=source, rgb=rgb, split_channels=split_channels, 
-			dropout=dropout, use_rand=use_rand)
+			norm=norm, data_key=data_key, split_channels=split_channels, 
+			dropout=dropout)
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
 		self.high_motion = high_motion	
@@ -108,7 +105,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames)
+			dataset_info = dataset_info_type(train=True, num_frames=self.num_frames)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform_rgb=transform_rgb,
 		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames, 
@@ -133,7 +130,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames)
+			dataset_info = dataset_info_type(train=False, num_frames=self.num_frames)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform_rgb=transform_rgb,
 		  transform_of=transform_of, transform_cod=transform_cod, num_frames=self.num_frames,
@@ -161,19 +158,15 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			weight_decay = 0.0005,
 			norm = 'BN',
 			data_key = 'all',
-			source = 'l',
 			num_frames = 10,
 			num_frames_cod = 4,
-			rgb = 0.3,
 			split_channels = False,
 			dropout = 0.5,
-			use_rand = True,
 			layer = 'fc6',
 			modalities = ['rgb', 'of'], 
 			high_motion = False,
-			time_flip = False,
+			time_flip = True,
 			similarity_scheme = 'cosine',
-			no_positive = False,
 			split = 1,
 			weight_pos = 0.5,
 			leaky_relu = False,
@@ -182,8 +175,8 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		):
 		super(Experiment_pretraining_fm, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
-			norm=norm, data_key=data_key, source=source, rgb=rgb, split_channels=split_channels, 
-			dropout=dropout, use_rand=use_rand)
+			norm=norm, data_key=data_key, split_channels=split_channels, 
+			dropout=dropout)
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
 		self.layer = layer
@@ -320,7 +313,6 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		return [images], None
 
 	def _reconfigure_dataloader_train(self):
-		rgb = self.rgb
 		transform_rgb = transforms.Compose([
 			transforms.Scale(256), 
 			transforms.RandomCrop(self.net.input_spatial_size),
@@ -341,7 +333,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=True, source=self.source, num_frames=self.num_frames,
+			dataset_info = dataset_info_type(train=True, num_frames=self.num_frames,
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform_rgb=transform_rgb,
@@ -369,7 +361,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			transforms.ToTensor()])
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames,
+			dataset_info = dataset_info_type(train=False, num_frames=self.num_frames,
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform_rgb=transform_rgb,
@@ -382,7 +374,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		self.dataloader = None
 		dataset_infos = []
 		for dataset_info_type in self.dataset_info_types:
-			dataset_info = dataset_info_type(train=False, source=self.source, num_frames=self.num_frames,
+			dataset_info = dataset_info_type(train=False, num_frames=self.num_frames,
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		if mode == 'RGB':
@@ -455,5 +447,5 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		f.close()	
 
 if __name__ == "__main__":
-	e = Experiment_pretraining_def('test_def', batch_size=10, source='s')
+	e = Experiment_pretraining_def('test_def', batch_size=10)
 	e.run()

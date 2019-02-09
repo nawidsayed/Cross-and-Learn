@@ -4,30 +4,30 @@ print('saved correctly %d' %id)
 from experiment import Experiment_pretraining_def, Experiment_pretraining_fm
 from experiment import Experiment_finetuning_ar_RGB, Experiment_finetuning_ar_OF
 
-e = Experiment_pretraining_fm('new_names', batch_size=1, epochs=200, source='l', 
-	data_key='ucf', norm='caffe_bn', layer='fc6',
-	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], high_motion=1, 
-	split_channels=True, time_flip=True, use_rand=False, similarity_scheme='cosine',
-	learning_rate = 0.005, lr_decay_scheme=1, eps=0.001, 
-	dropout=0.5)
-e.run()
-
-# e = Experiment_finetuning_ar_RGB('new_names', name_finetuning ='ar_ucf_200_ft', 
-# 	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+# e = Experiment_pretraining_fm('new_names', batch_size=5, epochs=200, 
+# 	data_key='ucf', norm='caffe_bn', layer='fc6',
+# 	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], high_motion=1, 
+# 	split_channels=True, time_flip=True, similarity_scheme='cosine',
+# 	learning_rate = 0.005, lr_decay_scheme=1, eps=0.001, 
+# 	dropout=0.5)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_pretraining_def('caffe_bn_def_ucf_nonzeros', batch_size=30, epochs=200, source='l', 
-# 	data_key='ucf', norm='caffe_bn_g2', learning_rate=0.01, high_motion=1, split_channels=True,
-# 	time_flip=True, num_frames=10, use_rand=False, lr_decay_scheme=1, modalities=['rgb', 'of'])
+e = Experiment_finetuning_ar_RGB('new_names', name_finetuning ='ar_ucf_200_ft', 
+	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
+	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+e.run()
+e.evaluate_net(num_test=25, final_test_runs=2)
+
+# e = Experiment_pretraining_def('new_names_def', batch_size=5, epochs=200,
+# 	data_key='ucf', norm='caffe_bn', learning_rate=0.01, high_motion=1, split_channels=True,
+# 	time_flip=True, num_frames=10, lr_decay_scheme=1, modalities=['rgb', 'of'])
 # e.run()
 
 # Check num_frames and remove_mot
 # e = Experiment_pretraining_fm('caffe_bn_ours_ucf_cod_of', batch_size=30, epochs=200, source='l', 
 # 	data_key='ucf', norm='caffe_bn_g2', max_shift=0, remove_motion=False, layer='fc6',
 # 	num_frames=10, num_frames_cod=4, modalities=['cod', 'of'], union=False, high_motion=1, 
-# 	split_channels=True, time_flip=True, use_rand=False, similarity_scheme='cosine',
+# 	split_channels=True, time_flip=True, similarity_scheme='cosine',
 # 	negatives_same_domain=True, no_positive=False, lamb_norm=0, lr_decay_scheme=1, learning_rate=0.01,
 # 	weight_pos=0.5, eps=0.0001, ada_weight_pos=False, ada_weight_pos_intervall=2, split=1, 
 # 	dropout=0.5, gradient_dot='balanced', leaky_relu=False)
