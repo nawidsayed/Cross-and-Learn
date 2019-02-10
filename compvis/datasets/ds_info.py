@@ -60,9 +60,10 @@ class UCF101_i(Base_Info_Video):
 		self.dict_label = {}
 		for split in [1,2,3]:
 			info_name = 'trainlist0' + str(split) + '.txt'
-			raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None)		
+			raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None, encoding=None)		
 			for i in range(raw_info.shape[0]):
-				name = (raw_info[i][0][:-4]).decode('UTF-8')
+				# print(raw_info[i][0][:-4])
+				name = (raw_info[i][0][:-4])
 				label = raw_info[i][1] - 1
 				drop_first = int((len(name) - 11) / 2) + 1
 				name = name[drop_first:]
@@ -79,12 +80,12 @@ class UCF101_i(Base_Info_Video):
 		self.len = len(self.list_items)
 
 	def _initialize(self, info_name, dict_names):
-		raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None)
+		raw_info = np.genfromtxt(os.path.join(self.path_infos, info_name), dtype=None, encoding=None)
 		for i in range(raw_info.shape[0]):
 			if info_name[:5] == 'train':
-				name = (raw_info[i][0][:-4]).decode('UTF-8')
+				name = (raw_info[i][0][:-4])
 			else:
-				name = (raw_info[i][:-4]).decode('UTF-8')
+				name = (raw_info[i][:-4])
 			drop_first = int((len(name) - 11) / 2) + 1
 			name = name[drop_first:]
 			item_name = dict_names[name + '.avi']
