@@ -1,2 +1,2 @@
-path_ucf: /path/to/path_ucf
-path_results: /path/to/results
+path_ucf: /net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/
+path_results: /export/home/nsayed/results/cal/
