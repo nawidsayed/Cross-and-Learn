@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import yaml
 
 import torch
 from time import time
@@ -28,6 +29,8 @@ from compvis.models import get_network, Net_ar
 # Every name can have multiple evals even from same subclass, 
 # Source is now a general attribute of a dataset_info 
 
+path_config = 'config.yml'
+
 def split_item(item, split_batch):
 	item_split = []	
 	if item is not None:
@@ -51,15 +54,12 @@ def split_item(item, split_batch):
 			item_split.append(None)
 	return item_split
 
-
-
 def split_data_labels(data, labels, split_batch):
  data_split = split_item(data, split_batch)
  labels_split = split_item(labels, split_batch)
  return data_split, labels_split
 
 class Base(object):
-	results_path = '/export/home/nsayed/results/of_2/'
 	max_digits = 4
 	mean = [0.485, 0.456, 0.406] 
 	std = [0.229, 0.224, 0.225]
@@ -72,6 +72,11 @@ class Base(object):
 		):
 		self.name = name
 		self.data_key = data_key
+
+		with open(path_config, 'r') as ymlfile:
+			cfg = yaml.load(ymlfile)	
+		self.results_path = cfg['path_results']
+		utils.mkdir(self.results_path)
 
 		self.results_dir = os.path.join(self.results_path, self.name)
 		utils.mkdir(self.results_dir)

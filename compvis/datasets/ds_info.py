@@ -3,9 +3,11 @@ import numpy as np
 import _pickle as pickle
 from PIL import Image
 from tqdm import tqdm
+import yaml
 
 __all__ = ['UCF101_i']
 
+path_config = 'config.yml'
 # train = None returns combined train and test set
 # source allows for different modes in dataset
 
@@ -18,9 +20,6 @@ class Base_Info(object):
 
 	def get_label(self, index):
 		raise NotImplementedError('Base_Info should implement get_label')
-
-	def get_data_cache(self):
-		raise NotImplementedError('Base_Info should implement get_data_cache')
 
 class Base_Info_Video(Base_Info):
 	def get_rgb_path(self, index, ind_frame):
@@ -38,20 +37,12 @@ class Base_Info_Video(Base_Info):
 	def get_mag(self, index):
 		raise NotImplementedError('Base_Info_Video should implement get_mag')
 
-	def get_label(self, index, ind_frame):
-		raise NotImplementedError('Base_Info_Video should implement get_label using ind_frame')
-
-class Base_Info_Image(Base_Info):
-	def get_image_path(self, index):
-		raise NotImplementedError('Base_Info_Image should implement get_image_path')
-
 class UCF101_i(Base_Info_Video):
-	path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/'
-	# path_data = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/images'
-	# path_data_flow = '/net/hci-storage02/groupfolders/compvis/nsayed/data/UCF_data/flow'
-	# path_infos = '/export/home/nsayed/data/UCF101'
 	def __init__(self, train=True, split=1, num_frames=12):
 		super(UCF101_i, self).__init__(train=train)
+		with open(path_config, 'r') as ymlfile:
+			cfg = yaml.load(ymlfile)
+		self.path_data = cfg['path_ucf']
 		self.path_rgb = os.path.join(self.path_data, 'rgb')
 		self.path_flow = os.path.join(self.path_data, 'flow')
 		self.path_infos = os.path.join(self.path_data, 'ucfTrainTestlist')
@@ -109,10 +100,6 @@ class UCF101_i(Base_Info_Video):
 		item_name = self.list_items[index]
 		return int(self.dict_label[item_name])
 
-	# This is used in case of storing flow in RAM
-	def get_data_cache(self):
-		return pickle.load(open(os.path.join(self.path_data, 'dict_data.pkl'), 'rb'))
-
 	def get_rgb_path(self, index, ind_frame):
 		item_name = self.list_items[index]
 		item_folder = os.path.join(self.path_rgb, item_name)
@@ -137,6 +124,8 @@ class UCF101_i(Base_Info_Video):
 		item_name = self.list_items[index]
 		return self.dict_mags[item_name]
 
+	# This method loads the dictionary containing the magnitude of all optical flow frames, 
+	# if the dictionary is not yet present it generates it on the fly and stores it path_ucf. 
 	def _get_dict_mags(self):
 		path_dict_mags = os.path.join(self.path_data, 'dict_mags.pkl')
 		if os.path.exists(path_dict_mags):

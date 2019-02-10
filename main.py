@@ -4,7 +4,7 @@ print('saved correctly %d' %id)
 from experiment import Experiment_pretraining_def, Experiment_pretraining_fm
 from experiment import Experiment_finetuning_ar_RGB, Experiment_finetuning_ar_OF
 
-# e = Experiment_pretraining_fm('new_names', batch_size=5, epochs=200, 
+# e = Experiment_pretraining_fm('cal_fm', batch_size=5, epochs=200, 
 # 	data_key='ucf', norm='caffe_bn', layer='fc6',
 # 	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], high_motion=1, 
 # 	split_channels=True, time_flip=True, similarity_scheme='cosine',
@@ -12,7 +12,7 @@ from experiment import Experiment_finetuning_ar_RGB, Experiment_finetuning_ar_OF
 # 	dropout=0.5)
 # e.run()
 
-e = Experiment_finetuning_ar_RGB('new_names', name_finetuning ='ar_ucf_200_ft', 
+e = Experiment_finetuning_ar_RGB('cal_fm', name_finetuning ='ar_ucf_200_ft', 
 	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
 	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
 e.run()
