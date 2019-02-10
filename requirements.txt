@@ -1,6 +1,0 @@
-matplotlib==3.0.2
-numpy==1.15.4
-tqdm==4.28.1
-torch==1.0.1.post2
-Pillow==5.4.1
-PyYAML==3.13
