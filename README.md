@@ -44,7 +44,7 @@ path_ucf
         ...
 
 ```
-The subfolders `ucf101_0, ucf101_1, ..., ucf101_13319` contain the rgb and flow frames of the respective videos in the dataset stored as jpg images, the optical flow files only contain a single color channel. The jpg files are named and numbered in the following manner:
+The subfolders `ucf101_0, ucf101_1, ..., ucf101_13319` contain the rgb and flow frames of the respective videos in the dataset stored as jpg images, the optical flow images are grayscale images. The jpg files are named and numbered in the following manner:
 
 ```
 ucf101_0
