@@ -13,9 +13,9 @@ from compvis.datasets import Dataset_def, Dataset_fm, Dataset_RGB, Dataset_OF
 
 from compvis import transforms_det as transforms 
 
-__all__ = ['Experiment_pretraining_def', 'Experiment_pretraining_fm']
+__all__ = ['Pretraining_Concat', 'Pretraining_Cross_and_Learn']
 
-class Experiment_pretraining_def(Base_experiment_pretraining):
+class Pretraining_Concat(Base_experiment_pretraining):
 	net = None
 	tracker = None
 	optimizer = None
@@ -37,7 +37,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 			high_motion = 1,
 			time_flip = True
 		):
-		super(Experiment_pretraining_def, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Pretraining_Concat, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			norm=norm, data_key=data_key, split_channels=split_channels, 
 			dropout=dropout)
@@ -143,7 +143,7 @@ class Experiment_pretraining_def(Base_experiment_pretraining):
 	def _reconfigure_tracker_test(self):
 		self.tracker = Tracker_classification(with_nonzeros=True)
 
-class Experiment_pretraining_fm(Base_experiment_pretraining):
+class Pretraining_Cross_and_Learn(Base_experiment_pretraining):
 	test_epoch_zero = True
 	net = None
 	tracker = None
@@ -173,7 +173,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			eps = 0.001,
 			gradient_dot = 'balanced'
 		):
-		super(Experiment_pretraining_fm, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Pretraining_Cross_and_Learn, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			norm=norm, data_key=data_key, split_channels=split_channels, 
 			dropout=dropout)
@@ -401,7 +401,7 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 			return self.net.mot_net
 
 	def _apply_per_epoch(self):
-		super(Experiment_pretraining_fm, self)._apply_per_epoch()
+		super(Pretraining_Cross_and_Learn, self)._apply_per_epoch()
 
 	def _reconfigure_tracker_train(self):
 		if len(self.modalities) == 2:
@@ -447,5 +447,5 @@ class Experiment_pretraining_fm(Base_experiment_pretraining):
 		f.close()	
 
 if __name__ == "__main__":
-	e = Experiment_pretraining_def('test_def', batch_size=10)
+	e = Pretraining_Concat('test_def', batch_size=10)
 	e.run()

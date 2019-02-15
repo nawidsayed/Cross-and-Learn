@@ -1,10 +1,10 @@
 id = 46
 print('saved correctly %d' %id)
 
-from experiment import Experiment_pretraining_def, Experiment_pretraining_fm
-from experiment import Experiment_finetuning_ar_RGB, Experiment_finetuning_ar_OF
+from experiment import Pretraining_Concat, Pretraining_Cross_and_Learn
+from experiment import Finetuning_AR_RGB, Finetuning_AR_OF
 
-e = Experiment_pretraining_fm('cal_fm', batch_size=30, epochs=200, 
+e = Pretraining_Cross_and_Learn('cal_new', batch_size=30, epochs=200, 
 	data_key='ucf', norm='caffe_bn', layer='fc6',
 	num_frames=1, num_frames_cod=4, modalities=['rgb', 'of'], high_motion=1, 
 	split_channels=True, time_flip=True, similarity_scheme='cosine',
@@ -12,19 +12,18 @@ e = Experiment_pretraining_fm('cal_fm', batch_size=30, epochs=200,
 	dropout=0.5)
 e.run()
 
-e = Experiment_finetuning_ar_RGB('cal_fm', name_finetuning ='ar_ucf_200_ft', 
-	dropout=0.5, data_key='ucf', load_epoch_pt=-1, epochs=200, freeze_layer='input', 
-	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
-e.run()
-e.evaluate_net(num_test=25, final_test_runs=2)
+# e = Finetuning_AR_RGB('cal_new', name_finetuning ='ar_ucf_200_ft', 
+# 	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
+# 	learning_rate=0.01, num_test=25, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+# e.run()
 
-# e = Experiment_pretraining_def('new_names_def', batch_size=5, epochs=200,
+# e = Pretraining_Concat('new_names_def', batch_size=5, epochs=200,
 # 	data_key='ucf', norm='caffe_bn', learning_rate=0.01, high_motion=1, split_channels=True,
 # 	time_flip=True, num_frames=10, lr_decay_scheme=1, modalities=['rgb', 'of'])
 # e.run()
 
 # Check num_frames and remove_mot
-# e = Experiment_pretraining_fm('caffe_bn_ours_ucf_cod_of', batch_size=30, epochs=200, source='l', 
+# e = Pretraining_Cross_and_Learn('caffe_bn_ours_ucf_cod_of', batch_size=30, epochs=200, source='l', 
 # 	data_key='ucf', norm='caffe_bn_g2', max_shift=0, remove_motion=False, layer='fc6',
 # 	num_frames=10, num_frames_cod=4, modalities=['cod', 'of'], union=False, high_motion=1, 
 # 	split_channels=True, time_flip=True, similarity_scheme='cosine',
@@ -38,104 +37,86 @@ e.evaluate_net(num_test=25, final_test_runs=2)
 # CaffeNet finetuning
 #####################################################
 
-# e = Experiment_finetuning_ar_RGB('new_names', name_finetuning ='ar_hmdb_200_ft', 
+# e = Finetuning_AR_RGB('new_names', name_finetuning ='ar_hmdb_200_ft', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+# 	learning_rate=0.01, num_test=25, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_RGB('new_names', name_finetuning ='ar_ucf_200_ft', 
+# e = Finetuning_AR_RGB('new_names', name_finetuning ='ar_ucf_200_ft', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=0, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.01, num_test=5, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
+# 	learning_rate=0.01, num_test=25, batch_size=128, reset_fc6=True, split=1, reset_fc7=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_OF('new_names', name_finetuning ='ar_ucf_200_flow', 
+# e = Finetuning_AR_OF('new_names', name_finetuning ='ar_ucf_200_flow', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, source='l', epochs=200, reset_fc6=True,
 # 	reset_fc7=True, remove_motion=False)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_OF('new_names', name_finetuning ='ar_hmdb_200_flow', 
+# e = Finetuning_AR_OF('new_names', name_finetuning ='ar_hmdb_200_flow', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, source='l', epochs=200, reset_fc6=True,
 # 	reset_fc7=True, remove_motion=False)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-
-# e = Experiment_finetuning_ar_COD('test_remove', name_finetuning ='ar_ucf_200_cod', 
+# e = Finetuning_ar_COD('test_remove', name_finetuning ='ar_ucf_200_cod', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, source='l', epochs=200, reset_fc6=True, reset_fc7=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_COD('test_remove', name_finetuning ='ar_hmdb_200_cod', 
+# e = Finetuning_ar_COD('test_remove', name_finetuning ='ar_hmdb_200_cod', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, source='l', epochs=200, reset_fc6=True, reset_fc7=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
-
-
 
 
 #####################################################
 # VGG16 finetuning
 #####################################################
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', name_finetuning ='ar_ucf_200_2', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', name_finetuning ='ar_ucf_200_2', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.005, num_test=3, batch_size=40, reset_fc7=True, reset_fc6=True)
-# e.run()
-# e.evaluate_net(num_test=5, final_test_runs=2, split_batch=5)
+# 	learning_rate=0.005, num_test=5, batch_size=40, reset_fc7=True, reset_fc6=True)
+# e.run(split_batch_test=5)
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', name_finetuning ='ar_hmdb_200_2', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', name_finetuning ='ar_hmdb_200_2', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, epochs=200, freeze_layer='input', 
-# 	learning_rate=0.005, num_test=3, batch_size=40, reset_fc7=True, reset_fc6=True)
-# e.run()
-# e.evaluate_net(num_test=5, final_test_runs=2, split_batch=5)
+# 	learning_rate=0.005, num_test=5, batch_size=40, reset_fc7=True, reset_fc6=True)
+# e.run(split_batch_test=5)
 
-
-# e = Experiment_finetuning_ar_OF('vgg16bn_ours_all', name_finetuning ='ar_ucf_400_flow', 
+# e = Finetuning_AR_OF('vgg16bn_ours_all', name_finetuning ='ar_ucf_400_flow', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, source='l', epochs=400,
-# 	learning_rate=0.005, num_test=3, batch_size=40)
-# e.run()
-# e.evaluate_net(num_test=5, final_test_runs=2, split_batch=5, load_epoch=400)
+# 	learning_rate=0.005, num_test=5, batch_size=40)
+# e.run(split_batch_test=5)
 
-# e = Experiment_finetuning_ar_OF('vgg16bn_ours_all', name_finetuning ='ar_hmdb_400_flow', 
+# e = Finetuning_AR_OF('vgg16bn_ours_all', name_finetuning ='ar_hmdb_400_flow', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, source='l', epochs=400, 
-# 	learning_rate=0.005, num_test=3, batch_size=40)
-# e.run()
-# e.evaluate_net(num_test=5, final_test_runs=2, split_batch=5, load_epoch=400)
+# 	learning_rate=0.005, num_test=5, batch_size=40)
+# e.run(split_batch_test=5)
 
 #####################################################
 # NOt quite clear whats going on here 
 #####################################################
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', 
 # 	name_finetuning ='ar_ucf_200_transfer_rgb_student_drop_euc', name_experiment='transfer_rgb_student_drop_euc', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, epochs=200, freeze_layer='input', learning_rate=0.01,
 # 	reset_fc7=True, reset_fc6=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', 
 # 	name_finetuning ='ar_hmdb_200_transfer_rgb_student_drop_euc', name_experiment='transfer_rgb_student_drop_euc', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, epochs=200, freeze_layer='input', learning_rate=0.01,
 # 	reset_fc7=True, reset_fc6=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', 
 # 	name_finetuning ='ar_ucf_200_transfer_rgb_student_drop_euc_2', name_experiment='transfer_rgb_student_drop_euc', 
 # 	dropout=0.5, data_key='ucf', load_epoch_pt=-1, epochs=200, freeze_layer='input', learning_rate=0.01,
 # 	reset_fc7=True, reset_fc6=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
-# e = Experiment_finetuning_ar_RGB('vgg16bn_ours_ucf', 
+# e = Finetuning_AR_RGB('vgg16bn_ours_ucf', 
 # 	name_finetuning ='ar_hmdb_200_transfer_rgb_student_drop_euc_2', name_experiment='transfer_rgb_student_drop_euc', 
 # 	dropout=0.5, data_key='hmdb', load_epoch_pt=-1, epochs=200, freeze_layer='input', learning_rate=0.01,
 # 	reset_fc7=True, reset_fc6=True)
 # e.run()
-# e.evaluate_net(num_test=25, final_test_runs=2)
 
 
 

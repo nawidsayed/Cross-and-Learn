@@ -52,7 +52,7 @@ class Tracker_classification(Tracker):
 			pred, predind = torch.max(output, 1)
 			diff = predind - labels
 			for i in range(length):
-				self.acc += output[i][labels[i]]
+				self.acc += float(output[i][labels[i]])
 				if diff[i] != 0:
 					self.err += 1	
 				if self.tir:

@@ -141,8 +141,6 @@ class Base_experiment(Base):
 			('learning_rate', learning_rate), ('lr_decay_scheme', lr_decay_scheme), 
 			('weight_decay', weight_decay)]
 
-		self.is_training = False
-
 	def push_loss(self):
 		if not hasattr(self, 'epoch'):
 			self._before_training()
@@ -201,7 +199,9 @@ class Base_experiment(Base):
 		else:
 			return None
 
-	def run(self, resume_training=0, split_batch=1, strict=True, final_test_runs=1):
+	# Parameter split_batch_test test can be used to alleviate Memory bottleneck, 
+	# should be a divisor of the effective batch size (Usually 250 for testing) 
+	def run(self, resume_training=0, split_batch_test=1, strict=True):
 		if resume_training != 0:
 			self._load_net(resume_training, strict=strict)
 		self.net.cuda()
@@ -215,11 +215,11 @@ class Base_experiment(Base):
 			self.epoch += 1
 		self._save_net_infos()
 		if self.test_epoch_zero and self.epoch == 0:
-			self._testing(split_batch=split_batch)
+			self._testing(split_batch=split_batch_test)
 		for _ in range(self.epochs-resume_training):
 			self._apply_per_epoch()
 			self.epoch += 1
-			self._training(split_batch=split_batch)
+			self._training()
 			if self.epoch % 10 == 0:
 				self._save_net_infos(latest=True)
 			if self.epoch % self.save_intervall == 0 or self.epoch == self.epochs:
@@ -228,22 +228,13 @@ class Base_experiment(Base):
 				self._save_net_infos(latest=True)
 			if self.epoch % self.test_intervall == 0 or self.epoch == self.epochs:
 				self._reconfigure_dataloader_tracker_test()
-				self._testing(split_batch=split_batch)
+				self._testing(split_batch=split_batch_test)
 				self._reconfigure_dataloader_tracker_train()
-		for _ in range(final_test_runs-1):
-			self.epoch += 1
-			self._training(split_batch=split_batch)
-			self.epoch += 1
-			self._training(split_batch=split_batch)
-			self._reconfigure_dataloader_tracker_test()
-			self._testing(split_batch=split_batch)
-			self._reconfigure_dataloader_tracker_train()		
 		self.net.cpu()
 		t1_tot = time()
 		print('total runtime run: %f' %(t1_tot-t0_tot))
 
 	def _training(self, split_batch=1):
-		self.is_training = True
 		t0 = time()
 		self.net.train(mode=True)
 		iterator = iter(self.dataloader)
@@ -281,7 +272,6 @@ class Base_experiment(Base):
 		self._write_progress('train', result)
 
 	def _testing(self, split_batch=1):
-		self.is_training = False
 		t0 = time()
 		self.net.train(mode=False)
 		iterator = iter(self.dataloader)
@@ -484,8 +474,8 @@ class Base_experiment_finetuning(Base_experiment):
 			load_epoch_pt = -1,
 			name_finetuning = None,
 			name_experiment = None,
-			reset_fc7 = False,
-			reset_fc6 = False,
+			reset_fc7 = True,
+			reset_fc6 = True,
 			freeze_layer = 'input', 
 			split = 1
 		):
@@ -512,36 +502,10 @@ class Base_experiment_finetuning(Base_experiment):
 			('reset_fc7', reset_fc7), ('freeze_layer', freeze_layer), ('split', split),
 			('reset_fc6', reset_fc6)]
 		self.save_intervall = 50
-		# Currently there is a massive bug in which training loss resets after testing the first time
+		# Currently there is a weird bug in which training loss resets after testing the first time
 		self.test_intervall = self.epochs
 		self.batch_size_test = 1
 		self._load_pretraining()
-
-	def evaluate_net(self, num_test=5, load_epoch=-1, final_test_runs=5, split_batch=1):
-		self._load_net(load_epoch)
-		t0_tot = time()
-		self.net.cuda()
-		self._reconfigure_dataloader_tracker_train()
-		num_test_before = self.num_test
-		self.num_test = num_test
-		self._print_infos()	
-		print('num_test: %d' %self.num_test)
-		self.epoch = 0
-		for _ in range(load_epoch):
-			self._apply_per_epoch()
-			self.epoch += 1
-		for _ in range(final_test_runs-1):
-			self.epoch += 1
-			# self._training()
-			self.epoch += 1
-			# self._training()
-			self._reconfigure_dataloader_tracker_test()
-			self._testing(split_batch=split_batch)
-			self._reconfigure_dataloader_tracker_train()	
-		self.net.cpu()
-		t1_tot = time()
-		self.num_test = num_test_before
-		print('total runtime evaluate_net: %f' %(t1_tot-t0_tot))		
 
 	def _load_pretraining(self):
 		results_dir_pt = os.path.join(self.results_path, self.name, self.name_experiment)

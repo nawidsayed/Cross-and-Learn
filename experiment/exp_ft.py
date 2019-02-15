@@ -11,9 +11,9 @@ from compvis.datasets import Dataset_RGB, Dataset_OF, Dataset_COD
 from time import time
 
 
-__all__ = ['Experiment_finetuning_ar_RGB','Experiment_finetuning_ar_OF','Experiment_finetuning_ar_COD']
+__all__ = ['Finetuning_AR_RGB','Finetuning_AR_OF','Finetuning_ar_COD']
 
-class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
+class Finetuning_AR_RGB(Base_experiment_finetuning):
 	net = None
 	tracker = None
 	dataloader = None
@@ -30,14 +30,14 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 			load_epoch_pt = -1,
 			name_finetuning = None,
 			name_experiment = None,
-			reset_fc7 = False,
-			reset_fc6 = False,
+			reset_fc7 = True,
+			reset_fc6 = True,
 			freeze_layer = 'input',
 			rgb = 0.3,
-			num_test = 5,
+			num_test = 25,
 			split = 1
 		):
-		super(Experiment_finetuning_ar_RGB, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Finetuning_AR_RGB, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			name_experiment=name_experiment, reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt,
@@ -52,10 +52,6 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 			lr=self.learning_rate, momentum=0.9, weight_decay=self.weight_decay)
 
 		self.criterion = nn.CrossEntropyLoss()
-
-	def run(self, resume_training=0):
-		super(Experiment_finetuning_ar_RGB, self).run(final_test_runs=1, resume_training=resume_training)
-
 
 	def _get_data(self, iterator):
 		images, labels = next(iterator, (None, None))
@@ -130,7 +126,7 @@ class Experiment_finetuning_ar_RGB(Base_experiment_finetuning):
 		else:
 			return net_pt
 
-class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
+class Finetuning_AR_OF(Base_experiment_finetuning):
 	net = None
 	tracker = None
 	dataloader = None
@@ -146,15 +142,15 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
-			reset_fc7 = False,
-			reset_fc6 = False,
+			reset_fc7 = True,
+			reset_fc6 = True,
 			freeze_layer = 'input',
-			num_test = 5,
+			num_test = 25,
 			time_flip = False,
 			split = 1, 
 			remove_motion = False
 		):
-		super(Experiment_finetuning_ar_OF, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Finetuning_AR_OF, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt, freeze_layer=freeze_layer, split=split, 
@@ -171,9 +167,6 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 		self.optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.net.parameters()), 
 			lr=self.learning_rate, momentum=0.9, weight_decay=self.weight_decay)
 		self.criterion = nn.CrossEntropyLoss()
-
-	def run(self):
-		super(Experiment_finetuning_ar_OF, self).run(final_test_runs=1)
 
 	def _get_data(self, iterator):
 		images, labels = next(iterator, (None, None))
@@ -230,7 +223,7 @@ class Experiment_finetuning_ar_OF(Base_experiment_finetuning):
 		else:
 			return net_pt
 
-class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
+class Finetuning_ar_COD(Base_experiment_finetuning):
 	net = None
 	tracker = None
 	dataloader = None
@@ -246,15 +239,15 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 			dropout = 0.5,
 			load_epoch_pt = -1,
 			name_finetuning = None,
-			reset_fc7 = False,
-			reset_fc6 = False,
+			reset_fc7 = True,
+			reset_fc6 = True,
 			freeze_layer = 'input',
-			num_test = 5,
+			num_test = 25,
 			nodiff = False,
 			time_flip = False,
 			split = 1
 		):
-		super(Experiment_finetuning_ar_COD, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Finetuning_ar_COD, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt, freeze_layer=freeze_layer, split=split,
@@ -330,6 +323,6 @@ class Experiment_finetuning_ar_COD(Base_experiment_finetuning):
 
 
 if __name__ == "__main__":
-	e = Experiment_finetuning_ar_RGB('test_ft', batch_size=20,  
+	e = Finetuning_AR_RGB('test_ft', batch_size=20,  
 		load_epoch_pt=400, name_finetuning='test_def')
 	e.run()
