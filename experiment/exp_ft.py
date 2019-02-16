@@ -11,7 +11,7 @@ from compvis.datasets import Dataset_RGB, Dataset_OF, Dataset_COD
 from time import time
 
 
-__all__ = ['Finetuning_AR_RGB','Finetuning_AR_OF','Finetuning_ar_COD']
+__all__ = ['Finetuning_AR_RGB','Finetuning_AR_OF','Finetuning_AR_COD']
 
 class Finetuning_AR_RGB(Base_experiment_finetuning):
 	net = None
@@ -221,7 +221,7 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 		else:
 			return net_pt
 
-class Finetuning_ar_COD(Base_experiment_finetuning):
+class Finetuning_AR_COD(Base_experiment_finetuning):
 	net = None
 	tracker = None
 	dataloader = None
@@ -245,7 +245,7 @@ class Finetuning_ar_COD(Base_experiment_finetuning):
 			time_flip = False,
 			split = 1
 		):
-		super(Finetuning_ar_COD, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
+		super(Finetuning_AR_COD, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
 			data_key=data_key, dropout=dropout, name_finetuning=name_finetuning, 
 			reset_fc7=reset_fc7, load_epoch_pt=load_epoch_pt, freeze_layer=freeze_layer, split=split,

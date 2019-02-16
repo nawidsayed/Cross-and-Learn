@@ -141,64 +141,6 @@ class Base_experiment(Base):
 			('learning_rate', learning_rate), ('lr_decay_scheme', lr_decay_scheme), 
 			('weight_decay', weight_decay)]
 
-	def push_loss(self):
-		if not hasattr(self, 'epoch'):
-			self._before_training()
-		if self.iterator is None:
-			self._before_epoch()
-		_, loss = self._iteration()
-		if loss is None:
-			return self._after_epoch()
-		return loss
-
-	def push_data(self):
-		if not hasattr(self, 'epoch'):
-			self._before_training()
-		if self.iterator is None:
-			self._before_epoch()
-		data, _ = self._iteration()
-		if data is None:
-			return self._after_epoch()
-		return data
-
-	def _before_training(self):
-		self.iterator = None
-		self.epoch = 0
-		self._write_infos()	
-		self._print_infos()	
-		self._save_net_infos()
-		self._reconfigure_dataloader_tracker_train()
-
-	def _before_epoch(self):
-		self._apply_per_epoch()
-		self.epoch += 1
-		self.iterator = iter(self.dataloader)
-
-	def _iteration(self):
-		data, labels = self._get_data(self.iterator)
-		if data is None:
-			return None, None
-		output = self._forward(data)
-		loss = self._get_loss(output, labels)	
-		loss_copy = loss.clone()
-		self.tracker.update(output, labels, loss_copy)
-		return data, loss
-
-	def _after_epoch(self):
-		result = self.tracker.result()
-		result = [('epoch', self.epoch)] + result
-		print('train ' + utils.print_iterable(result, max_digits=self.max_digits))
-		self._write_progress('train', result)
-		if self.epoch % 10 == 0:
-			self._save_net_infos(latest=True)
-		if self.epoch % self.save_intervall == 0:
-			self._save_net_infos()
-		if self.epoch != self.epochs:
-			self.iterator = None
-			return self.push_loss()
-		else:
-			return None
-
 	# Parameter split_batch_test test can be used to alleviate Memory bottleneck, 
 	# should be a divisor of the effective batch size (Usually 250 for testing) 
 	def run(self, resume_training=0, split_batch_test=1, strict=True):
@@ -214,18 +156,17 @@ class Base_experiment(Base):
 			self._apply_per_epoch()
 			self.epoch += 1
 		self._save_net_infos()
+		self._save_net_infos(latest=True)
 		if self.test_epoch_zero and self.epoch == 0:
 			self._testing(split_batch=split_batch_test)
 		for _ in range(self.epochs-resume_training):
 			self._apply_per_epoch()
 			self.epoch += 1
 			self._training()
-			if self.epoch % 10 == 0:
+			if self.epoch % 10 == 0 or self.epoch == self.epochs:
 				self._save_net_infos(latest=True)
 			if self.epoch % self.save_intervall == 0 or self.epoch == self.epochs:
 				self._save_net_infos()
-			if self.epoch == self.epochs:
-				self._save_net_infos(latest=True)
 			if self.epoch % self.test_intervall == 0 or self.epoch == self.epochs:
 				self._reconfigure_dataloader_tracker_test()
 				self._testing(split_batch=split_batch_test)
@@ -262,8 +203,6 @@ class Base_experiment(Base):
 			loss_cum += float(loss)
 			counter_cum += 1
 		loss_cum /= counter_cum
-		if self._interrupt_training(loss_cum):
-			raise Exception('Training interrupted loss: %f' %loss_cum)
 		result = self.tracker.result()
 		t1 = time()
 		runtime = t1-t0
@@ -363,11 +302,9 @@ class Base_experiment(Base):
 	def _forward(self, data):
 		return self.net(*data)
 
-	def _interrupt_training(self, loss_cum):
-		return False
-
 	# This func puts data fields into var and cuda 
 	# and returns it together with labels, if iterator is at end, return None
+
 	def _get_data(self, iterator):
 		raise NotImplementedError('_get_data in Base_experiment not implemented')	
 
@@ -517,10 +454,8 @@ class Base_experiment_finetuning(Base_experiment):
 			utils.load_sd(net_pt, new_sd)
 		feature_net = self._get_pretrained_subnet(net_pt)
 		if self.reset_fc7:
-			print('reset_fc7')
 			feature_net.reset_fc7()
 		if self.reset_fc6:
-			print('reset_fc6')
 			feature_net.reset_fc6()
 		self.net = Net_ar(feature_net, dropout=self.dropout, data_key=self.data_key)	
 		self.net.freeze_layers(self.freeze_layer)
