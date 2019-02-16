@@ -433,16 +433,16 @@ class Net_ar(Base_Network):
 class Base_TwoStream(Base_Network):
     input_spatial_size = (224, 224)
     input_dim = None
-    def __init__(self, norm='BN', num_frames=12, num_frames_cod=4, dropout=0.5, 
+    def __init__(self, arch='caffe_BN', num_frames=12, num_frames_cod=4, dropout=0.5, 
         modalities=['rgb', 'of'], decoder=0, leaky_relu=False):
         super(Base_TwoStream, self).__init__()
-        self.norm = norm
+        self.arch = arch
         self.num_frames = num_frames
         self.num_frames_cod = num_frames_cod
         self.modalities = modalities
-        if self.norm == 'caffe_bn':
+        if self.arch == 'caffe_bn':
             arch = CaffeNet_BN
-        elif self.norm == 'vgg16bn':
+        elif self.arch == 'vgg16bn':
             arch = VGG_16_BN
 
         if 'rgb' in self.modalities:
@@ -455,7 +455,7 @@ class Base_TwoStream(Base_Network):
 
     def get_net_info(self):
         dict_info = super(Base_TwoStream, self).get_net_info()
-        dict_info.update({'norm': self.norm, 'num_frames': self.num_frames, 
+        dict_info.update({'arch': self.arch, 'num_frames': self.num_frames, 
             'num_frames_cod': self.num_frames_cod, 'modalities':self.modalities})
         return dict_info
 
@@ -474,9 +474,9 @@ class Base_TwoStream(Base_Network):
         # return self.app_net.get_features(drop=drop), self.mot_net.get_features(drop=drop)
 
 class Concat(Base_TwoStream):
-    def __init__(self, norm='BN', num_frames=12, num_frames_cod=4, dropout=0.5, modalities=['rgb', 'of'],
+    def __init__(self, arch='caffe_bn', num_frames=12, num_frames_cod=4, dropout=0.5, modalities=['rgb', 'of'],
         decoder=None, layer='fc6'):
-        super(Concat, self).__init__(norm=norm, num_frames=num_frames, dropout=dropout, 
+        super(Concat, self).__init__(arch=arch, num_frames=num_frames, dropout=dropout, 
             modalities=modalities, num_frames_cod=num_frames_cod)
         self.layer = layer
         self.classifier = nn.ModuleList([
@@ -523,10 +523,10 @@ class Concat(Base_TwoStream):
         return predictions[0], predictions[1], predictions[2], predictions[3], nonzeros       
 
 class Cross_and_Learn(Base_TwoStream):
-    def __init__(self, norm='BN', layer='fc6', num_frames=12, num_frames_cod=4, dropout=0.5,
+    def __init__(self, arch='arch', layer='fc6', num_frames=12, num_frames_cod=4, dropout=0.5,
         modalities=['rgb', 'of'], decoder=False, similarity_scheme='cosine', 
         leaky_relu=False, eps=0.001, ):
-        super(Cross_and_Learn, self).__init__(norm=norm, num_frames=num_frames, 
+        super(Cross_and_Learn, self).__init__(arch=arch, num_frames=num_frames, 
             num_frames_cod=num_frames_cod, dropout=dropout, modalities=modalities,
             decoder=decoder, leaky_relu=leaky_relu)
         if leaky_relu and layer != 'fc6':

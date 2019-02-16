@@ -21,7 +21,7 @@ class Finetuning_AR_RGB(Base_experiment_finetuning):
 	def __init__(self,
 			name,
 			batch_size = 128,
-			epochs = 1000,
+			epochs = 200,
 			learning_rate = 0.01,
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
@@ -134,7 +134,7 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 	def __init__(self,
 			name,
 			batch_size = 128,
-			epochs = 1000,
+			epochs = 200,
 			learning_rate = 0.01,
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,
@@ -148,7 +148,6 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 			num_test = 25,
 			time_flip = False,
 			split = 1, 
-			remove_motion = False
 		):
 		super(Finetuning_AR_OF, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 
 			learning_rate=learning_rate, lr_decay_scheme=lr_decay_scheme, weight_decay=weight_decay, 
@@ -159,9 +158,8 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 		self.num_test = num_test
 		self.num_frames = int(self.net.input_dim / 2)
 		self.time_flip = time_flip
-		self.remove_motion = remove_motion
 		self.list_infos += [('num_test', num_test), ('num_frames', self.num_frames), 
-			('time_flip', time_flip), ('remove_motion', remove_motion)]
+			('time_flip', time_flip)]
 		self.dataset_type = Dataset_OF
 		self.tracker = Tracker_classification()
 		self.optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.net.parameters()), 
@@ -193,7 +191,7 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=True, transform=transform,
-			num_frames=self.num_frames, time_flip=self.time_flip, remove_motion=self.remove_motion)
+			num_frames=self.num_frames, time_flip=self.time_flip)
 		self._reconfigure_dataloader(dataset, self.batch_size, shuffle=True)
 
 	def _reconfigure_dataloader_test(self):
@@ -208,7 +206,7 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 				split=self.split)
 			dataset_infos.append(dataset_info)
 		dataset = self.dataset_type(infos=dataset_infos, train=False, transform=transform, 
-			num_test=self.num_test, num_frames=self.num_frames, remove_motion=self.remove_motion)
+			num_test=self.num_test, num_frames=self.num_frames)
 		self._reconfigure_dataloader(dataset, self.batch_size_test, shuffle=False)
 
 	def _reconfigure_tracker_train(self):
@@ -231,7 +229,7 @@ class Finetuning_ar_COD(Base_experiment_finetuning):
 	def __init__(self,
 			name,
 			batch_size = 128,
-			epochs = 1000,
+			epochs = 200,
 			learning_rate = 0.01,
 			lr_decay_scheme = 1,
 			weight_decay = 0.0005,

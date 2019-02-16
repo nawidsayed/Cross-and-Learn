@@ -424,8 +424,8 @@ class Base_experiment_pretraining(Base_experiment):
 			learning_rate = 0.01,
 			lr_decay_scheme = 0,
 			weight_decay = 0.0005,
-			data_key = 'all',
-			norm = 'BN',
+			data_key = 'ucf',
+			arch = 'caffe_bn',
 			split_channels = False,
 			dropout = 0.5,
 		):
@@ -437,10 +437,10 @@ class Base_experiment_pretraining(Base_experiment):
 		if not utils.mkdir(self.results_dir):
 			print('Existing experiment for given name')
 
-		self.norm = norm
+		self.arch = arch
 		self.split_channels = split_channels
 		self.dropout = dropout
-		self.list_infos += [('norm', norm), ('split_channels', split_channels), 
+		self.list_infos += [('arch', arch), ('split_channels', split_channels), 
 			('dropout', dropout)]
 		self.save_intervall = 50
 		self.test_intervall = 10
