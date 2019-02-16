@@ -9,7 +9,7 @@ from experiment import utils
 from experiment import Base_experiment_pretraining
 from experiment.tracker import Tracker_classification, Tracker_similarity, Tracker_similarity_rec
 from compvis.models import Concat, Cross_and_Learn
-from compvis.datasets import Dataset_def, Dataset_fm, Dataset_RGB, Dataset_OF
+from compvis.datasets import Dataset_Two_Stream, Dataset_RGB, Dataset_OF
 
 from compvis import transforms_det as transforms 
 
@@ -54,7 +54,7 @@ class Pretraining_Concat(Base_experiment_pretraining):
 		self.tracker = Tracker_classification()
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
 			momentum=0.9, weight_decay=self.weight_decay)
-		self.dataset_type = Dataset_fm
+		self.dataset_type = Dataset_Two_Stream
 		self.criterion = nn.CrossEntropyLoss()
 
 	def _get_data(self, iterator):
@@ -200,7 +200,7 @@ class Pretraining_Cross_and_Learn(Base_experiment_pretraining):
 		self.tracker = Tracker_similarity()
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate,
 			momentum=0.9, weight_decay=self.weight_decay)
-		self.dataset_type = Dataset_fm
+		self.dataset_type = Dataset_Two_Stream
 
 	def _get_data(self, iterator):
 		samples = next(iterator, None)

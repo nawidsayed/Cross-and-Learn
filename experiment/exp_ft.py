@@ -146,7 +146,7 @@ class Finetuning_AR_OF(Base_experiment_finetuning):
 			reset_fc6 = True,
 			freeze_layer = 'input',
 			num_test = 25,
-			time_flip = False,
+			time_flip = True,
 			split = 1, 
 		):
 		super(Finetuning_AR_OF, self).__init__(name=name, batch_size=batch_size, epochs=epochs, 

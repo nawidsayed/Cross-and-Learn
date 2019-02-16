@@ -430,12 +430,12 @@ class Net_ar(Base_Network):
         self.feature_net.reset_fc6()
 
 
-class Base_TwoStream(Base_Network):
+class Base_Two_Stream(Base_Network):
     input_spatial_size = (224, 224)
     input_dim = None
     def __init__(self, arch='caffe_BN', num_frames=12, num_frames_cod=4, dropout=0.5, 
         modalities=['rgb', 'of'], decoder=0, leaky_relu=False):
-        super(Base_TwoStream, self).__init__()
+        super(Base_Two_Stream, self).__init__()
         self.arch = arch
         self.num_frames = num_frames
         self.num_frames_cod = num_frames_cod
@@ -454,7 +454,7 @@ class Base_TwoStream(Base_Network):
                 leaky_relu=leaky_relu)
 
     def get_net_info(self):
-        dict_info = super(Base_TwoStream, self).get_net_info()
+        dict_info = super(Base_Two_Stream, self).get_net_info()
         dict_info.update({'arch': self.arch, 'num_frames': self.num_frames, 
             'num_frames_cod': self.num_frames_cod, 'modalities':self.modalities})
         return dict_info
@@ -473,7 +473,7 @@ class Base_TwoStream(Base_Network):
         raise NotImplementedError('previous implementation deprecated')
         # return self.app_net.get_features(drop=drop), self.mot_net.get_features(drop=drop)
 
-class Concat(Base_TwoStream):
+class Concat(Base_Two_Stream):
     def __init__(self, arch='caffe_bn', num_frames=12, num_frames_cod=4, dropout=0.5, modalities=['rgb', 'of'],
         decoder=None, layer='fc6'):
         super(Concat, self).__init__(arch=arch, num_frames=num_frames, dropout=dropout, 
@@ -522,7 +522,7 @@ class Concat(Base_TwoStream):
             predictions.append(output)
         return predictions[0], predictions[1], predictions[2], predictions[3], nonzeros       
 
-class Cross_and_Learn(Base_TwoStream):
+class Cross_and_Learn(Base_Two_Stream):
     def __init__(self, arch='arch', layer='fc6', num_frames=12, num_frames_cod=4, dropout=0.5,
         modalities=['rgb', 'of'], decoder=False, similarity_scheme='cosine', 
         leaky_relu=False, eps=0.001, ):

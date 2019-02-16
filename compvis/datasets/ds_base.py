@@ -8,8 +8,7 @@ import os
 from io import BytesIO
 import compvis.data as data
 
-__all__ = ['Dataset_Image', 'Dataset_RGB', 'Dataset_OF', 'Dataset_COD', 
-'Dataset_def', 'Dataset_fm']
+__all__ = ['Dataset_Image', 'Dataset_RGB', 'Dataset_OF', 'Dataset_COD', 'Dataset_Two_Stream']
 
 # Resizes image to at least (320, 240) and then crops for that size
 def prep_image(path):
@@ -354,80 +353,11 @@ class Dataset_COD(Base_Dataset):
 	def get_sample(self, index):
 		return self.preprocess(self[index])[0][0]
 
-class Dataset_def(Base_Dataset):
-	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, num_frames=12, 
-		high_motion=1, time_flip=False):
-		super(Dataset_def, self).__init__(infos, train=train)
-		self.data_rgb = Dataset_RGB(infos, train=train, transform=transform_rgb)
-		self.data_of = Dataset_OF(infos, train=train, transform=transform_of, num_frames=num_frames,
-			time_flip=False)
-		self.num_frames = num_frames
-		self.high_motion = high_motion
-		self.time_flip = time_flip
-
-	def __getitem__(self, index_big):
-		index_big = self._prep_index(index_big)
-		info, index = self.get_info_index(index_big)
-		num_rgb = info.get_num_rgb(index)
-		random = np.random.RandomState()
-		list_mag = info.get_mag(index)
-		ind_frame_first = sample_high_motion(list_mag, self.num_frames, mode=self.high_motion)
-		first, _ = self.data_rgb[index_big, ind_frame_first]
-		last, _ = self.data_rgb[index_big, ind_frame_first+self.num_frames]
-		flow, _ = self.data_of[index_big, ind_frame_first]
-		flow_negatives = []
-		indices = random.randint(0, len(self), size=2)
-		for index_big in indices:
-			info, index = self.get_info_index(index_big)
-			num_rgb = info.get_num_rgb(index)
-			list_mag = info.get_mag(index)
-			ind_frame_first = sample_high_motion(list_mag, self.num_frames, mode=self.high_motion)
-			flow_negative, _ = self.data_of[index_big, ind_frame_first]
-			flow_negatives.append(flow_negative)
-		return first, last, flow, flow_negatives[0], flow_negatives[1]
-
-	def preprocess(self, raw):
-		raw = list(raw)
-		random = np.random.RandomState()
-		randomstate = random.get_state() 
-		rand_flip = 0
-		if self.time_flip and self.train:
-			rand_flip = np.random.rand()
-		first, last, flow, flow_n1, flow_n2 = raw
-		first, _ = self.data_rgb.preprocess((first, None, random))
-		random.set_state(randomstate)
-		last, _ = self.data_rgb.preprocess((last, None, random))
-		random.set_state(randomstate)
-		flow, _ = self.data_of.preprocess((flow, None, random))
-		flow_n1, _ = self.data_of.preprocess((flow_n1, None, random))
-		flow_n2, _ = self.data_of.preprocess((flow_n2, None, random))
-		flow = rand_timeflip(flow, rand_flip, 2)
-		if rand_flip > 0.5:
-			temp = first
-			first = last
-			last = temp
-		if self.time_flip and self.train:
-			rand_flip_1 = np.random.rand()
-			rand_flip_2 = np.random.rand()
-			flow_n1 = rand_timeflip(flow_n1, rand_flip_1, 2)
-			flow_n2 = rand_timeflip(flow_n2, rand_flip_2, 2)
-		return first, last, flow, flow_n1, flow_n2
-
-	@property
-	def data_cache(self):
-		return [self.data_rgb.data_cache, self.data_of.data_cache]
-
-	@data_cache.setter
-	def data_cache(self, cache):
-		self.data_rgb.data_cache = cache[0]
-		self.data_of.data_cache = cache[1]		
-
-
-class Dataset_fm(Base_Dataset):
+class Dataset_Two_Stream(Base_Dataset):
 	def __init__(self, infos, train=True, transform_rgb=None, transform_of=None, transform_cod=None,
 		num_frames=12, num_frames_cod=4,
 		modalities = ['rgb', 'of'], high_motion=1, time_flip=False):
-		super(Dataset_fm, self).__init__(infos, train=train)
+		super(Dataset_Two_Stream, self).__init__(infos, train=train)
 		self.num_frames = num_frames
 		self.num_frames_cod = num_frames_cod
 		self.modalities = modalities
