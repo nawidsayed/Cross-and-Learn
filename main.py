@@ -2,7 +2,7 @@ from experiment import Pretraining_Concat, Pretraining_Cross_and_Learn
 from experiment import Finetuning_AR_RGB, Finetuning_AR_OF
 
 # ========================================================================================
-# Run by uncomenting the respective experiment, multiple experimens can be run sucessively 
+# Run by uncommenting the respective experiment, multiple experimens can be run sucessively 
 # ========================================================================================
 
 # Classes to train our novel model or a Concat model
@@ -13,9 +13,9 @@ from experiment import Finetuning_AR_RGB, Finetuning_AR_OF
 # available choices are: 'conv5', 'pool5', 'fc6', 'fc7'.
 # With similarity_scheme we can choose wether to use 'cosine' or 'euclidean' distance.
 
-# Pretraining_Cross_and_Learn(name='cross_and_learn', batch_size=30, epochs=200, learning_rate=0.01,
+# Pretraining_Cross_and_Learn(name='cross_and_learn', batch_size=30, epochs=1, learning_rate=0.01,
 # 	arch='caffe_bn', layer='fc6', similarity_scheme='cosine',
-# 	split_channels=True, time_flip=True, num_frames_flow=10).run()
+# 	split_channels=True, time_flip=True, num_frames_flow=1).run()
 
 # Pretraining_Concat(name='concat', batch_size=30, epochs=200, learning_rate=0.01,
 # 	arch='caffe_bn', 
@@ -25,13 +25,13 @@ from experiment import Finetuning_AR_RGB, Finetuning_AR_OF
 # The parameter name_finetuning sets up a new folder in the respective pre-training directory.
 # Parameter split selects available train/test splits and can be 1, 2 or 3.
 # load_epoch_pt selects the pre-training checkpoint epoch from which to load the model parameters,
-# setting this to -1 loads the most recent checkpoint.
+# setting this to -1 loads the most recent checkpoint. Fine-tuning a randomly initialized model 
+# can be done via setting load_epoch_pt to 0.
 
-# Finetuning_AR_RGB(name='cross_and_learn', name_finetuning ='finetuning_UCF_RGB', 
-# 	split=1, epochs=200, batch_size=128, learning_rate=0.01, 
-# 	load_epoch_pt=-1).run()
+Finetuning_AR_RGB(name='cross_and_learn', name_finetuning ='finetuning_UCF_RGB', 
+	split=1, epochs=200, batch_size=128, learning_rate=0.01, 
+	load_epoch_pt=-1).run()
 
 Finetuning_AR_OF(name='cross_and_learn', name_finetuning ='finetuning_UCF_OF', 
 	split=1, epochs=200, batch_size=128, learning_rate=0.01,
 	load_epoch_pt=-1).run()
-
