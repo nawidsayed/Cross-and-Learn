@@ -44,7 +44,7 @@ path_ucf
         ...
 
 ```
-The subfolders `ucf101_0, ucf101_1, ..., ucf101_13319` contain the rgb and flow frames of the respective videos in the dataset stored as jpg images, the optical flow images are grayscale images. The jpg files are named and numbered in the following manner:
+The subfolders `ucf101_0, ucf101_1, ..., ucf101_13319` contain the rgb and flow frames of the respective videos in the dataset stored as jpg images, the optical flow files only contain a single color channel. The jpg files are named and numbered in the following manner:
 
 ```
 ucf101_0
@@ -60,7 +60,8 @@ Lastly the optional file `dict_mags.pkl` is a serialized dictionary containing v
 
 ### Usage
 
-To be extended soon
+Experiments are run by the main file. There are two pre-training methods available, ours `Pretraining_Cross_and_Learn` and the comparison baseline `Pretraining_Concat`, which learns via a binary classification problem. Similarly there are two fine-tuning experiments, `Finetuning_AR_RGB` in order to finetune the RGB network of the model onto UCF-101 and `Finetuning_AR_OF` for the optical flow network respectively. 
 
+The results of the experiments are stored in `path_results` which can be set in `config.yml`.
 
 
