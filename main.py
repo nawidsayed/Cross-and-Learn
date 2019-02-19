@@ -13,9 +13,9 @@ from experiment import Finetuning_AR_RGB, Finetuning_AR_OF
 # available choices are: 'conv5', 'pool5', 'fc6', 'fc7'.
 # With similarity_scheme we can choose wether to use 'cosine' or 'euclidean' distance.
 
-# Pretraining_Cross_and_Learn(name='cross_and_learn', batch_size=30, epochs=1, learning_rate=0.01,
-# 	arch='caffe_bn', layer='fc6', similarity_scheme='cosine',
-# 	split_channels=True, time_flip=True, num_frames_flow=1).run()
+Pretraining_Cross_and_Learn(name='cross_and_learn', batch_size=30, epochs=200, learning_rate=0.01,
+	arch='caffe_bn', layer='fc6', similarity_scheme='cosine',
+	split_channels=True, time_flip=True, num_frames_flow=10).run()
 
 # Pretraining_Concat(name='concat', batch_size=30, epochs=200, learning_rate=0.01,
 # 	arch='caffe_bn', 
