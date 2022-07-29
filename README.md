@@ -7,7 +7,7 @@ The file `net_features.pkl` contains the parameters (conv layers) of my pre-trai
 
 ### Requirements
 
-The requirements can be found in requirements.txt and can be installed via `pip install -r requirements.txt`
+The requirements can be found in requirements.txt and can be installed via `pip install -r requirements.txt`. This implementation is optimized for high GPU utilization and thus preloads the entire UCF-101 dataset into RAM. At least 64GB of RAM are required.
 
 ### Data preparation UCF-101
 
